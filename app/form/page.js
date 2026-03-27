@@ -28,24 +28,25 @@ import { CSS } from '@dnd-kit/utilities';
 
 function StepBasic({ data, onChange }) {
   useEffect(() => {
-    // Auto-fill province on first load via IP mapping if not set
-    if (!data.province) {
-      fetch('https://whois.pconline.com.cn/ipJson.jsp?json=true', { cache: 'no-store' })
-        .then(res => res.arrayBuffer())
-        .then(buffer => {
-          const text = new TextDecoder('gbk').decode(buffer);
-          const ipData = JSON.parse(text);
-          if (ipData && ipData.pro) {
-            let p = ipData.pro.replace(/省|市|维吾尔自治区|回族自治区|壮族自治区|自治区|特别行政区/g, '');
-            if (p === '黑龙') p = '黑龙江';
-            if (p === '内蒙') p = '内蒙古';
-            if (PROVINCES.includes(p)) {
-              onChange('province', p);
-            }
-          }
-        })
-        .catch(err => console.warn('Failed to auto-detect province:', err));
+    if (data.province) {
+      return;
     }
+
+    const controller = new AbortController();
+
+    fetch('/api/geo/province', {
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+      .then((res) => res.ok ? res.json() : { province: null })
+      .then((payload) => {
+        if (payload?.province) {
+          onChange('province', payload.province);
+        }
+      })
+      .catch(() => {});
+
+    return () => controller.abort();
   }, [data.province, onChange]);
 
   return (
