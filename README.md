@@ -184,6 +184,27 @@ npm run build
 - 首页新闻展示依赖仓库内已有缓存文件，即使不手动刷新也能正常展示
 - 当前 [render.yaml](file:///Users/caizhen/Desktop/Dev/高考志愿助手/webapp/render.yaml) 已默认把 `PREVIEW_MODE` 设为 `true`
 
+## 静态预览部署
+
+如果 Render 的免费 Web Service 额度已经用完，可以直接部署 `static-preview` 目录：
+
+- 部署类型：`Static Site`
+- Publish Directory：`static-preview`
+- Build Command：留空即可
+
+静态预览包含：
+
+- `static-preview/index.html` 首页预览
+- `static-preview/form.html` 表单预览
+- `static-preview/report.html` 报告预览
+
+特点：
+
+- 不依赖 Next.js 服务端
+- 不依赖数据库、AI、支付接口
+- 适合只看手机端前端效果
+- 可直接部署到 Render Static Site、GitHub Pages、Netlify 等静态托管平台
+
 ## 当前特性说明
 
 - 首页新闻抓取已支持教育部原始 HTML 回退

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>高考志愿 AI 助手 · 静态预览</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="preview-shell">
+      <nav class="preview-nav">
+        <div class="preview-brand">
+          <span>高考志愿 AI 助手</span>
+          <span class="preview-badge">前端静态预览</span>
+        </div>
+        <div class="preview-links">
+          <a href="./index.html">首页</a>
+          <a href="./form.html">表单</a>
+          <a href="./report.html">报告</a>
+        </div>
+      </nav>
+
+      <section class="preview-hero">
+        <div class="panel hero-main">
+          <span class="preview-badge">2026 高考志愿 · 移动端静态预览</span>
+          <h1 id="hero-title"></h1>
+          <p class="hero-subtitle" id="hero-subtitle"></p>
+          <div class="cta-row">
+            <a class="btn-primary" href="./form.html">开始查看表单页</a>
+            <a class="btn-secondary" href="./report.html">直接看报告页</a>
+          </div>
+          <div class="metrics" id="hero-metrics"></div>
+          <div class="hero-notes">
+            <div class="hero-note">这套静态页专门给你做手机端检查，不依赖 AI、支付或数据库。</div>
+            <div class="hero-note">你可以直接部署成 Static Site，用于看首屏密度、卡片高度、按钮触达和报告排版。</div>
+          </div>
+        </div>
+
+        <aside class="panel hero-news">
+          <div class="section-heading">
+            <span>2026 最新速览</span>
+            <strong>政策与高校招考快讯</strong>
+            <p>用静态数据保留首页资讯结构，方便你在手机上看真实视觉层次。</p>
+          </div>
+          <div class="news-list" id="hero-news-list"></div>
+        </aside>
+      </section>
+    </div>
+
+    <script src="./preview-data.js"></script>
+    <script>
+      const { home } = window.STATIC_PREVIEW;
+      document.getElementById('hero-title').innerHTML = home.titleLines.join('<br />');
+      document.getElementById('hero-subtitle').textContent = home.subtitle;
+
+      document.getElementById('hero-metrics').innerHTML = home.metrics
+        .map((item) => `
+          <div class="metric">
+            <strong>${item.value}</strong>
+            <span>${item.label}</span>
+          </div>
+        `)
+        .join('');
+
+      document.getElementById('hero-news-list').innerHTML = home.news
+        .map((item, index) => `
+          <article class="news-card">
+            <div class="news-index">0${index + 1}</div>
+            <div>
+              <div class="news-meta">
+                <span class="tag">${item.tag}</span>
+                <span>${item.date}</span>
+              </div>
+              <h3>${item.title}</h3>
+              <p class="report-paragraph">${item.summary}</p>
+              <div class="news-meta">
+                <span>${item.source}</span>
+                <span>静态展示</span>
+              </div>
+            </div>
+          </article>
+        `)
+        .join('');
+    </script>
+  </body>
+  </html>

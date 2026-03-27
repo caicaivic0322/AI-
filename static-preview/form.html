@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>高考志愿 AI 助手 · 表单静态预览</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="preview-shell form-page">
+      <nav class="preview-nav">
+        <div class="preview-brand">
+          <span>高考志愿 AI 助手</span>
+          <span class="preview-badge">表单静态预览</span>
+        </div>
+        <div class="preview-links">
+          <a href="./index.html">首页</a>
+          <a href="./form.html">表单</a>
+          <a href="./report.html">报告</a>
+        </div>
+      </nav>
+
+      <div class="form-layout">
+        <aside class="panel form-sidebar">
+          <div class="section-heading">
+            <span>4 步填写</span>
+            <strong>先看手机端表单体验</strong>
+            <p>这里保留了真实项目的布局气质，但改成纯静态交互，方便你直接检查手机端点击与排版。</p>
+          </div>
+          <div class="step-list">
+            <div class="step-item active">1. 基础分数与省份</div>
+            <div class="step-item">2. 城市与院校偏好</div>
+            <div class="step-item">3. 家庭与路径优先级</div>
+            <div class="step-item">4. 补充说明与生成报告</div>
+          </div>
+        </aside>
+
+        <section class="panel form-card">
+          <div class="section-heading">
+            <span>当前展示</span>
+            <strong>第一步 · 基础信息</strong>
+            <p>输入框、单选项、按钮和留白都按手机端可用性来检查。</p>
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label>省份</label>
+              <div class="fake-select" id="province-field"></div>
+            </div>
+            <div class="field">
+              <label>高考分数</label>
+              <input id="score-field" type="text" />
+            </div>
+            <div class="field">
+              <label>全省位次</label>
+              <input id="rank-field" type="text" />
+            </div>
+            <div class="field">
+              <label>科类 / 选科组合</label>
+              <div class="fake-select" id="subject-field"></div>
+            </div>
+          </div>
+
+          <div style="margin-top: 20px" class="field">
+            <label>城市意向</label>
+            <div class="chips">
+              <span class="chip selected">上海</span>
+              <span class="chip selected">杭州</span>
+              <span class="chip">北京</span>
+              <span class="chip">深圳</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 20px" class="field">
+            <label>学校偏好</label>
+            <div class="chips">
+              <span class="chip">985</span>
+              <span class="chip">211</span>
+              <span class="chip selected">双一流</span>
+              <span class="chip">公办优先</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 20px" class="field">
+            <label>补充说明</label>
+            <textarea>希望优先考虑就业结果更稳的专业，也希望城市资源更强，家长更关注落地性和后续发展。</textarea>
+          </div>
+
+          <div class="form-actions">
+            <a class="btn-secondary" href="./index.html">返回首页</a>
+            <a class="btn-primary" href="./report.html" data-preview-submit>生成预览报告</a>
+          </div>
+
+          <p class="static-note">静态预览模式下，这个按钮只会跳转到报告页，不会请求任何接口。</p>
+        </section>
+      </div>
+    </div>
+
+    <script src="./preview-data.js"></script>
+    <script>
+      const { defaultForm } = window.STATIC_PREVIEW;
+      document.getElementById('province-field').textContent = defaultForm.province;
+      document.getElementById('score-field').value = defaultForm.score;
+      document.getElementById('rank-field').value = defaultForm.rank;
+      document.getElementById('subject-field').textContent = defaultForm.subjectType;
+
+      document.querySelector('[data-preview-submit]').addEventListener('click', () => {
+        localStorage.setItem('static-preview-form', JSON.stringify(defaultForm));
+      });
+    </script>
+  </body>
+  </html>

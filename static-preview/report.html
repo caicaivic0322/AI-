@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>高考志愿 AI 助手 · 报告静态预览</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="preview-shell report-page">
+      <nav class="preview-nav">
+        <div class="preview-brand">
+          <span>高考志愿 AI 助手</span>
+          <span class="preview-badge">前端静态预览</span>
+        </div>
+        <div class="preview-links">
+          <a href="./index.html">首页</a>
+          <a href="./form.html">表单</a>
+          <a href="./report.html">报告</a>
+        </div>
+      </nav>
+
+      <header class="panel report-header">
+        <div class="section-heading">
+          <span>完整报告页</span>
+          <strong>志愿分析报告 · 静态预览</strong>
+          <p>这个页面专门保留了完整信息密度，方便你在手机上查看卡片、段落、按钮与间距。</p>
+        </div>
+        <div class="report-meta">
+          <span class="preview-badge">前端静态预览</span>
+          <span id="generated-at"></span>
+        </div>
+      </header>
+
+      <div class="report-grid" style="margin-top: 20px;">
+        <section class="panel report-highlight">
+          <div>
+            <span class="pill">学生定位</span>
+            <p class="report-paragraph" id="student-summary"></p>
+          </div>
+          <div>
+            <span class="pill">家庭决策</span>
+            <p class="report-paragraph" id="family-summary"></p>
+          </div>
+          <div class="mini-card">
+            <h4>核心策略</h4>
+            <p id="strategy-core"></p>
+          </div>
+          <div class="mini-card">
+            <h4>不建议做法</h4>
+            <p id="strategy-not-recommended"></p>
+          </div>
+          <div class="mini-card">
+            <h4>需继续核实</h4>
+            <p id="strategy-uncertainties"></p>
+          </div>
+        </section>
+
+        <section class="panel report-card">
+          <div class="section-heading">
+            <span>冲稳保组合</span>
+            <strong>学校与专业建议</strong>
+          </div>
+          <div class="plan-list" id="plan-list"></div>
+        </section>
+      </div>
+
+      <div class="report-grid" style="margin-top: 20px;">
+        <section class="panel report-section">
+          <div class="section-heading">
+            <span>就业趋势</span>
+            <strong>专业与行业研判</strong>
+          </div>
+          <div class="trend-list" id="trend-list"></div>
+        </section>
+
+        <section class="panel report-section">
+          <div class="section-heading">
+            <span>结论</span>
+            <strong>这套静态页适合怎么看</strong>
+          </div>
+          <div class="report-list">
+            <div class="mini-card">
+              <h4>手机端验收重点</h4>
+              <p>重点看首屏节奏、按钮触达、资讯卡片高度、报告段落密度和分区可读性。</p>
+            </div>
+            <div class="mini-card">
+              <h4>当前说明</h4>
+              <p id="report-conclusion"></p>
+            </div>
+            <div class="mini-card">
+              <h4>建议动作</h4>
+              <p>如果这套静态页在手机上满意，再回头逐项把真实动态站做相同风格的细节打磨。</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script src="./preview-data.js"></script>
+    <script>
+      const { report, defaultForm } = window.STATIC_PREVIEW;
+      const savedForm = JSON.parse(localStorage.getItem('static-preview-form') || 'null') || defaultForm;
+
+      document.getElementById('generated-at').textContent = `生成时间：${report.generatedAt}`;
+      document.getElementById('student-summary').textContent = `${report.studentSummary} 当前预览使用的是 ${savedForm.province} · ${savedForm.subjectType} · ${savedForm.score} 分。`;
+      document.getElementById('family-summary').textContent = report.familySummary;
+      document.getElementById('strategy-core').textContent = report.strategy.core;
+      document.getElementById('strategy-not-recommended').textContent = report.strategy.notRecommended;
+      document.getElementById('strategy-uncertainties').textContent = report.strategy.uncertainties;
+      document.getElementById('report-conclusion').textContent = report.conclusion;
+
+      document.getElementById('plan-list').innerHTML = report.plans
+        .map((item) => `
+          <article class="mini-card">
+            <div class="report-meta">
+              <span class="tag">${item.type}</span>
+              <span>录取率 ${item.admissionRate}</span>
+            </div>
+            <h4>${item.school} · ${item.major}</h4>
+            <p>${item.reason}</p>
+            <p><strong>注意：</strong>${item.risk}</p>
+          </article>
+        `)
+        .join('');
+
+      document.getElementById('trend-list').innerHTML = report.trends
+        .map((item) => `
+          <article class="mini-card">
+            <div class="report-meta">
+              <span class="tag">${item.verdict}</span>
+              <span>${savedForm.city}</span>
+            </div>
+            <h4>${item.title}</h4>
+            <p>${item.summary}</p>
+          </article>
+        `)
+        .join('');
+    </script>
+  </body>
+  </html>
