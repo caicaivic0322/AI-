@@ -8,6 +8,10 @@ export async function handleGenerateReportRequest(request, dependencies) {
     createReport,
     updateReportContent,
     generateReport,
+    previewMode = false,
+    buildPreviewReport,
+    markReportPaid,
+    createPreviewOrderNo = () => `PREVIEW_ORDER_${Date.now()}`,
     runInBackground = (task) => {
       queueMicrotask(() => {
         task().catch((error) => {
@@ -28,6 +32,21 @@ export async function handleGenerateReportRequest(request, dependencies) {
 
     const reportId = createId();
     createReport(reportId, formData);
+
+    if (previewMode) {
+      const reportContent = buildPreviewReport(formData);
+      updateReportContent(reportId, reportContent);
+
+      if (markReportPaid) {
+        markReportPaid(reportId, createPreviewOrderNo(reportId));
+      }
+
+      return jsonResponse({
+        success: true,
+        reportId,
+        preview: true,
+      });
+    }
 
     runInBackground(async () => {
       const reportContent = await generateReport(formData);

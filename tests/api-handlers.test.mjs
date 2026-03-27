@@ -103,6 +103,52 @@ test('/api/generate returns reportId after saving generated content', async () =
   ]);
 });
 
+test('/api/generate stores a full preview report immediately in preview mode', async () => {
+  const calls = [];
+  const response = await handleGenerateReportRequest(
+    createJsonRequest('http://localhost:3000/api/generate', {
+      province: '浙江',
+      score: '650',
+      rank: '8000',
+      subject_type: '物理类',
+      decision_maker: '家长',
+    }),
+    {
+      previewMode: true,
+      createId: () => 'preview-report-id',
+      createReport: (id, formData) => calls.push(['create', id, formData]),
+      updateReportContent: (id, content) => calls.push(['update', id, content]),
+      markReportPaid: (id, orderNo) => calls.push(['paid', id, orderNo]),
+      buildPreviewReport: () => ({
+        student_summary: '预览报告',
+        plans: [],
+      }),
+      createPreviewOrderNo: () => 'PREVIEW_ORDER_1',
+    }
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await readJson(response), {
+    success: true,
+    reportId: 'preview-report-id',
+    preview: true,
+  });
+  assert.deepEqual(calls, [
+    ['create', 'preview-report-id', {
+      province: '浙江',
+      score: '650',
+      rank: '8000',
+      subject_type: '物理类',
+      decision_maker: '家长',
+    }],
+    ['update', 'preview-report-id', {
+      student_summary: '预览报告',
+      plans: [],
+    }],
+    ['paid', 'preview-report-id', 'PREVIEW_ORDER_1'],
+  ]);
+});
+
 test('/api/report/[id] masks sensitive fields for unpaid reports', async () => {
   const response = await handleGetReportRequest(
     new Request('http://localhost:3000/api/report/report-1'),

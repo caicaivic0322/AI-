@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: gaokao-volunteer-assistant
+    runtime: node
+    plan: free
+    autoDeploy: true
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: PREVIEW_MODE
+        value: true

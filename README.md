@@ -80,6 +80,7 @@ TAVILY_API_KEY=
 XUNHU_APPID=
 XUNHU_APPSECRET=
 CRON_SECRET=
+PREVIEW_MODE=false
 ```
 
 说明：
@@ -87,6 +88,7 @@ CRON_SECRET=
 - 至少配置一个 AI Key，推荐优先配置 `DEEPSEEK_API_KEY`
 - 如果未配置支付密钥，支付接口会进入开发模式
 - `CRON_SECRET` 用于保护定时刷新接口
+- `PREVIEW_MODE=true` 时，生成接口会直接写入完整示例报告并自动解锁，适合纯前端演示
 
 ### 3. 启动项目
 
@@ -161,6 +163,26 @@ npm run build
 - 已配置 `CRON_SECRET`
 - 如需真实支付，已配置虎皮椒支付密钥
 - 定时任务将由 `vercel.json` 自动声明
+
+## Render 预览部署
+
+如果你只是想在手机端查看前端表现，Render 可以按“预览环境”来部署：
+
+- Runtime: `Node`
+- Build Command: `npm install && npm run build`
+- Start Command: `npm run start`
+- Node Version: `20`
+
+仓库里已经提供了 [render.yaml](file:///Users/caizhen/Desktop/Dev/高考志愿助手/webapp/render.yaml)，直接导入仓库即可。
+
+仅做前端预览时，推荐这样处理：
+
+- 将 `PREVIEW_MODE` 设为 `true`
+- 不配置 AI Key 也可以完整走通“填写表单 → 生成报告 → 查看完整报告”
+- 不配置支付密钥时，支付不会成为阻塞项
+- SQLite 数据在 Render 普通预览环境里不是持久化存储，刷新实例后可能丢失，只适合临时演示
+- 首页新闻展示依赖仓库内已有缓存文件，即使不手动刷新也能正常展示
+- 当前 [render.yaml](file:///Users/caizhen/Desktop/Dev/高考志愿助手/webapp/render.yaml) 已默认把 `PREVIEW_MODE` 设为 `true`
 
 ## 当前特性说明
 
