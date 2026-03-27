@@ -3,6 +3,10 @@
 一个面向高考志愿决策场景的 Next.js Web 应用。  
 它会结合政策变化、录取率与趋势判断，以就业结果为导向，生成更贴近真实决策的志愿分析报告。
 
+## 页面预览
+
+![首页预览](./public/screenshots/homepage.png)
+
 ## 产品能力
 
 - 4 步表单收集省份、分数、位次、选科、城市偏好、学校层次、家庭诉求和路径优先级
@@ -60,7 +64,13 @@ npm install
 
 ### 2. 配置环境变量
 
-在项目根目录创建 `.env.local`，常用变量如下：
+可以先复制 `.env.example` 再生成自己的 `.env.local`：
+
+```bash
+cp .env.example .env.local
+```
+
+常用变量如下：
 
 ```bash
 DEEPSEEK_API_KEY=
