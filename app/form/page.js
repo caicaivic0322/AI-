@@ -5,9 +5,19 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   PROVINCES, SUBJECT_TYPES, PATH_OPTIONS,
-  USER_ROLES, INTERESTS, STRONG_SUBJECTS, FORM_STEPS,
+  USER_ROLES, INTERESTS, STRONG_SUBJECTS,
   HOT_CITIES,
+  GENDER_OPTIONS,
+  SCHOOL_PREFERENCE_OPTIONS,
+  HOME_PROVINCE_OPTIONS,
 } from '../lib/constants';
+import {
+  toggleDelimitedSelection,
+  toggleSchoolPreferenceSelection,
+  moveListItem,
+  buildSubmitPayload,
+  getFormFlowConfig,
+} from '../lib/form-utils.mjs';
 import {
   DndContext,
   closestCenter,
@@ -26,7 +36,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-function StepBasic({ data, onChange }) {
+function StepBasic({ data, onChange, mode = 'guided' }) {
   useEffect(() => {
     if (data.province) {
       return;
@@ -82,28 +92,42 @@ function StepBasic({ data, onChange }) {
         </div>
       </div>
 
-      <div className="field-group">
-        <label className="field-label">是否服从调剂 <span className="required">*</span></label>
-        <div className="option-group">
-          {[{ v: true, l: '是，服从调剂' }, { v: false, l: '否，不服从' }].map(opt => (
-            <label key={String(opt.v)} className={`option-item ${data.accept_adjustment === opt.v ? 'selected' : ''}`}>
-              <input type="radio" checked={data.accept_adjustment === opt.v} onChange={() => onChange('accept_adjustment', opt.v)} />
-              <span className="option-dot" />
-              <span className="option-text">{opt.l}</span>
-            </label>
-          ))}
-        </div>
-      </div>
+      {mode === 'guided' && (
+        <>
+          <div className="field-group">
+            <label className="field-label">是否服从调剂 <span className="required">*</span></label>
+            <div className="option-group">
+              {[{ v: true, l: '是，服从调剂' }, { v: false, l: '否，不服从' }].map(opt => (
+                <label key={String(opt.v)} className={`option-item ${data.accept_adjustment === opt.v ? 'selected' : ''}`}>
+                  <input type="radio" checked={data.accept_adjustment === opt.v} onChange={() => onChange('accept_adjustment', opt.v)} />
+                  <span className="option-dot" />
+                  <span className="option-text">{opt.l}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="field-group">
+            <label className="field-label">性别</label>
+            <div className="option-group">
+              {GENDER_OPTIONS.map(opt => (
+                <label key={opt.value} className={`option-item ${data.gender === opt.value ? 'selected' : ''}`}>
+                  <input type="radio" checked={data.gender === opt.value} onChange={() => onChange('gender', opt.value)} />
+                  <span className="option-dot" />
+                  <span className="option-text">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
 
 function StepPreference({ data, onChange }) {
-  const addCity = (city) => {
-    const current = data.target_city || '';
-    if (!current.includes(city)) {
-      onChange('target_city', current ? `${current}、${city}` : city);
-    }
+  const toggleCity = (city) => {
+    onChange('target_city', toggleDelimitedSelection(data.target_city || '', city));
   };
 
   return (
@@ -116,7 +140,7 @@ function StepPreference({ data, onChange }) {
               key={city} 
               type="button" 
               className={`chip ${data.target_city?.includes(city) ? 'selected' : ''}`} 
-              onClick={() => addCity(city)}
+              onClick={() => toggleCity(city)}
             >
               {city}
             </button>
@@ -141,8 +165,13 @@ function StepPreference({ data, onChange }) {
       <div className="field-group">
         <label className="field-label">学校层次偏好</label>
         <div className="chip-group">
-          {['985', '211', '双一流', '公办优先', '无特殊偏好'].map(pref => (
-            <button key={pref} type="button" className={`chip ${data.school_preference === pref ? 'selected' : ''}`} onClick={() => onChange('school_preference', pref)}>
+          {SCHOOL_PREFERENCE_OPTIONS.map(pref => (
+            <button
+              key={pref}
+              type="button"
+              className={`chip ${(data.school_preference || []).includes(pref) ? 'selected' : ''}`}
+              onClick={() => onChange('school_preference', toggleSchoolPreferenceSelection(data.school_preference, pref))}
+            >
               {pref}
             </button>
           ))}
@@ -152,11 +181,11 @@ function StepPreference({ data, onChange }) {
       <div className="field-group">
         <label className="field-label">是否优先留在本省</label>
         <div className="option-group">
-          {[{ v: true, l: '是，优先本省' }, { v: false, l: '不一定' }].map(opt => (
-            <label key={String(opt.v)} className={`option-item ${data.prefer_home_province === opt.v ? 'selected' : ''}`}>
-              <input type="radio" checked={data.prefer_home_province === opt.v} onChange={() => onChange('prefer_home_province', opt.v)} />
+          {HOME_PROVINCE_OPTIONS.map(opt => (
+            <label key={opt.value} className={`option-item ${data.prefer_home_province === opt.value ? 'selected' : ''}`}>
+              <input type="radio" checked={data.prefer_home_province === opt.value} onChange={() => onChange('prefer_home_province', opt.value)} />
               <span className="option-dot" />
-              <span className="option-text">{opt.l}</span>
+              <span className="option-text">{opt.label}</span>
             </label>
           ))}
         </div>
@@ -165,7 +194,7 @@ function StepPreference({ data, onChange }) {
   );
 }
 
-function SortableItem({ id, idx }) {
+function SortableItem({ id, idx, total, onMove }) {
   const {
     attributes,
     listeners,
@@ -187,6 +216,14 @@ function SortableItem({ id, idx }) {
     <div ref={setNodeRef} style={style} className="sortable-item">
       <span className={`sortable-rank rank-${idx + 1}`}>{idx + 1}</span>
       <span className="sortable-text">{id}</span>
+      <div className="sort-buttons">
+        <button type="button" className="sort-btn" disabled={idx === 0} onClick={() => onMove(id, 'up')} aria-label={`${id} 上移`}>
+          ↑
+        </button>
+        <button type="button" className="sort-btn" disabled={idx === total - 1} onClick={() => onMove(id, 'down')} aria-label={`${id} 下移`}>
+          ↓
+        </button>
+      </div>
       <div 
         {...attributes} 
         {...listeners} 
@@ -224,6 +261,10 @@ function StepFamily({ data, onChange }) {
     }
   };
 
+  const handleMove = (item, direction) => {
+    onChange('path_priority', moveListItem(pathPriority, item, direction));
+  };
+
   return (
     <>
       <div className="field-group">
@@ -245,12 +286,12 @@ function StepFamily({ data, onChange }) {
 
       <div className="field-group">
         <label className="field-label">路径优先级排序 <span className="required">*</span></label>
-        <p style={{ fontSize: '0.8125rem', color: '#6B7280', marginBottom: 12 }}>按住右侧图标拖拽调整顺序，排在前面优先级更高</p>
+        <p style={{ fontSize: '0.8125rem', color: '#6B7280', marginBottom: 12 }}>可拖拽，也可点击上下箭头调整顺序；排在前面优先级更高。</p>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={pathPriority} strategy={verticalListSortingStrategy}>
             <div className="sortable-list">
               {pathPriority.map((item, idx) => (
-                <SortableItem key={item} id={item} idx={idx} />
+                <SortableItem key={item} id={item} idx={idx} total={pathPriority.length} onMove={handleMove} />
               ))}
             </div>
           </SortableContext>
@@ -332,11 +373,76 @@ function StepStudent({ data, onChange }) {
   );
 }
 
-const STEP_COMPONENTS = [StepBasic, StepPreference, StepFamily, StepStudent];
+function StepAutoPlan({ data, onChange }) {
+  const toggleSubject = (subject) => {
+    const current = data.strong_subjects || [];
+    if (current.includes(subject)) {
+      onChange('strong_subjects', current.filter((item) => item !== subject));
+    } else if (current.length < 4) {
+      onChange('strong_subjects', [...current, subject]);
+    }
+  };
+
+  return (
+    <>
+      <div className="form-mode-panel auto">
+        <div className="form-mode-panel-head">
+          <span className="form-mode-mini-badge">AI 全自动规划</span>
+          <h3>你先不用想城市、学校和专业</h3>
+        </div>
+        <p>
+          只告诉我们你更擅长哪些学科，AI 会结合你的分数、位次和录取可能，
+          自动推断更适合的学校层次、专业方向、就业节奏与入学后的发展路径。
+        </p>
+        <div className="form-mode-auto-notes">
+          <span>自动补齐默认偏好</span>
+          <span>自动形成冲稳保组合</span>
+          <span>自动给出就业与升学建议</span>
+        </div>
+      </div>
+
+      <div className="field-group">
+        <label className="field-label">擅长科目 <span className="required">*</span></label>
+        <div className="chip-group">
+          {STRONG_SUBJECTS.map(subject => (
+            <button key={subject} type="button" className={`chip ${(data.strong_subjects || []).includes(subject) ? 'selected' : ''}`} onClick={() => toggleSubject(subject)}>
+              {subject}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+const STEP_COMPONENTS = {
+  guided: [StepBasic, StepPreference, StepFamily, StepStudent],
+  auto: [StepBasic, StepAutoPlan],
+};
+
+const FORM_MODE_OPTIONS = [
+  {
+    value: 'guided',
+    label: '我自己细化填写',
+    badge: '更细致',
+    title: '我有一些偏好，想自己把条件说清楚',
+    description: '适合已经对城市、学校层次、发展路径有初步想法的人。',
+    highlights: ['可填写地域偏好', '可排序未来路径', '报告更贴近个人意愿'],
+  },
+  {
+    value: 'auto',
+    label: '让 AI 全自动规划',
+    badge: '更省事',
+    title: '我还没想清楚方向，让 AI 先帮我规划',
+    description: '只填核心信息和擅长科目，AI 自动完成学校、专业与就业路径推演。',
+    highlights: ['输入更少', '自动补齐缺失偏好', '更适合一头雾水的家长和学生'],
+  },
+];
 
 export default function FormPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
+  const [formMode, setFormMode] = useState('guided');
   const [formData, setFormData] = useState({
     path_priority: PATH_OPTIONS.map(p => p.label),
   });
@@ -364,16 +470,38 @@ export default function FormPage() {
     setError('');
   }, []);
 
+  const handleModeChange = useCallback((nextMode) => {
+    if (nextMode === formMode) {
+      return;
+    }
+
+    setFormMode(nextMode);
+    setStep(0);
+    setStepKey((value) => value + 1);
+    setDirection('forward');
+    setError('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [formMode]);
+
+  const { steps, helperText } = getFormFlowConfig(formMode);
+
   const validateStep = () => {
-    if (step === 0) {
+    const currentStep = steps[step]?.id;
+
+    if (currentStep === 'basic') {
       if (!formData.province) return '请选择省份';
       if (!formData.score) return '请输入分数';
       if (!formData.rank) return '请输入位次';
       if (!formData.subject_type) return '请选择科类';
-      if (formData.accept_adjustment === undefined) return '请选择是否服从调剂';
+      if (formMode === 'guided' && formData.accept_adjustment === undefined) return '请选择是否服从调剂';
     }
-    if (step === 2) {
+    if (currentStep === 'family') {
       if (!formData.decision_maker) return '请选择谁主导决策';
+    }
+    if (formMode === 'auto' && currentStep === 'student') {
+      if (!Array.isArray(formData.strong_subjects) || formData.strong_subjects.length === 0) {
+        return '请至少选择 1 门擅长科目';
+      }
     }
     return null;
   };
@@ -381,7 +509,7 @@ export default function FormPage() {
   const handleNext = () => {
     const err = validateStep();
     if (err) { setError(err); return; }
-    if (step < FORM_STEPS.length - 1) {
+    if (step < steps.length - 1) {
       setDirection('forward');
       setStep(step + 1);
       setStepKey(k => k + 1);
@@ -405,10 +533,11 @@ export default function FormPage() {
     setError('');
 
     try {
+      const payload = buildSubmitPayload(formData, formMode);
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '生成失败');
@@ -419,21 +548,12 @@ export default function FormPage() {
     }
   };
 
-  const StepComponent = STEP_COMPONENTS[step];
-  const isLastStep = step === FORM_STEPS.length - 1;
-  const progress = ((step + 1) / FORM_STEPS.length) * 100;
-  const helperText = [
-    '先确认基础分数信息，我们会据此建立你的定位。',
-    '地域和院校偏好会直接影响推荐边界与筛选顺序。',
-    '把家庭决策逻辑说清楚，报告会更贴近真实讨论场景。',
-    '最后补充学生画像，让推荐更像“为你做的”而不是模板。',
-  ];
-  const loadingItems = [
-    '采集信息完成',
-    '构建考生画像',
-    '生成差异化方案',
-    '复核输出质量',
-  ];
+  const StepComponent = STEP_COMPONENTS[formMode][step];
+  const isLastStep = step === steps.length - 1;
+  const progress = ((step + 1) / steps.length) * 100;
+  const loadingItems = formMode === 'auto'
+    ? ['采集核心成绩信息', '构建自动画像', '推演学校与专业', '生成入学与就业规划']
+    : ['采集信息完成', '构建考生画像', '生成差异化方案', '复核输出质量'];
 
   if (loading) {
     return (
@@ -445,8 +565,8 @@ export default function FormPage() {
           <div className="loading-icon">🎓</div>
         </div>
         <div>
-          <div className="loading-text">正在为你生成志愿分析报告</div>
-          <div className="loading-subtext">AI 正在综合分析你的分数、偏好和路径匹配度…</div>
+          <div className="loading-text">{formMode === 'auto' ? 'AI 正在全自动规划志愿方案' : '正在为你生成志愿分析报告'}</div>
+          <div className="loading-subtext">{formMode === 'auto' ? 'AI 正在从分数、位次和擅长科目出发，补齐适合你的学校、专业和发展路径…' : 'AI 正在综合分析你的分数、偏好和路径匹配度…'}</div>
         </div>
         <div className="loading-steps">
           {loadingItems.map((item, index) => {
@@ -472,7 +592,7 @@ export default function FormPage() {
         <div className="form-header-inner">
           <span className="form-brand">高考志愿 AI</span>
           <div className="step-progress">
-            {FORM_STEPS.map((_, i) => (
+            {steps.map((_, i) => (
               <span key={i} className={`step-dot ${i === step ? 'active' : ''} ${i < step ? 'done' : ''}`} />
             ))}
           </div>
@@ -484,13 +604,36 @@ export default function FormPage() {
 
       <div className="form-body">
         <div className="form-container">
+          <div className="form-mode-grid">
+            {FORM_MODE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`form-mode-card ${formMode === option.value ? 'active' : ''}`}
+                onClick={() => handleModeChange(option.value)}
+              >
+                <div className="form-mode-card-head">
+                  <span className="form-mode-badge">{option.badge}</span>
+                  <span className="form-mode-label">{option.label}</span>
+                </div>
+                <strong>{option.title}</strong>
+                <p>{option.description}</p>
+                <div className="form-mode-points">
+                  {option.highlights.map((item) => (
+                    <span key={item}>{item}</span>
+                  ))}
+                </div>
+              </button>
+            ))}
+          </div>
+
           <div className={`step-wrapper step-${direction}`} key={stepKey}>
             <div className="form-step-header">
-              <div className="form-step-icon">{FORM_STEPS[step].icon}</div>
+              <div className="form-step-icon">{steps[step].icon}</div>
               <div className="form-step-text">
-                <span className="form-step-kicker">第 {step + 1} / {FORM_STEPS.length} 步</span>
-                <h2>{FORM_STEPS[step].title}</h2>
-                <p>{FORM_STEPS[step].description}</p>
+                <span className="form-step-kicker">第 {step + 1} / {steps.length} 步 · {formMode === 'auto' ? 'AI 全自动' : '自主填写'}</span>
+                <h2>{steps[step].title}</h2>
+                <p>{steps[step].description}</p>
               </div>
             </div>
 
@@ -499,7 +642,7 @@ export default function FormPage() {
               <span>{helperText[step]}</span>
             </div>
 
-            <StepComponent data={formData} onChange={handleChange} />
+            <StepComponent data={formData} onChange={handleChange} mode={formMode} />
 
             {error && <div className="error-toast">{error}</div>}
           </div>
@@ -511,7 +654,7 @@ export default function FormPage() {
           <button className="btn btn-back" onClick={handleBack}>← 上一步</button>
         )}
         {isLastStep ? (
-          <button className="btn btn-submit" onClick={handleSubmit}>🎓 生成志愿报告</button>
+          <button className="btn btn-submit" onClick={handleSubmit}>{formMode === 'auto' ? '🪄 让 AI 全自动规划' : '🎓 生成志愿报告'}</button>
         ) : (
           <button className="btn btn-next" onClick={handleNext}>下一步 →</button>
         )}
