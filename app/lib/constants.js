@@ -32,6 +32,20 @@ export const USER_ROLES = [
   { value: '一起', label: '学生和家长一起', icon: '🤝' },
 ];
 
+export const GENDER_OPTIONS = [
+  { value: '男', label: '男' },
+  { value: '女', label: '女' },
+  { value: '不方便透露', label: '不方便透露' },
+];
+
+export const SCHOOL_PREFERENCE_OPTIONS = ['985', '211', '双一流', '公办优先', '无特殊偏好'];
+
+export const HOME_PROVINCE_OPTIONS = [
+  { value: 'home', label: '本省优先' },
+  { value: 'out', label: '外省优先' },
+  { value: 'unsure', label: '不确定' },
+];
+
 // Interest directions
 export const INTERESTS = [
   '计算机/互联网', '人工智能', '电子信息', '机械工程',

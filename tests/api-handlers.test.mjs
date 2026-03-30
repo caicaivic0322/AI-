@@ -70,6 +70,7 @@ test('/api/generate returns reportId after saving generated content', async () =
         finishGeneration = () => resolve({ student_summary: 'ok' });
       }),
       updateReportContent: (id, content) => calls.push(['update', id, content]),
+      updateReportStatus: (id, status, errorMessage = null) => calls.push(['status', id, status, errorMessage]),
     }
   );
 
@@ -86,6 +87,7 @@ test('/api/generate returns reportId after saving generated content', async () =
       subject_type: '物理类',
       decision_maker: '家长',
     }],
+    ['status', 'report-test-id', 'pending', null],
   ]);
 
   await Promise.resolve();
@@ -99,7 +101,57 @@ test('/api/generate returns reportId after saving generated content', async () =
       subject_type: '物理类',
       decision_maker: '家长',
     }],
+    ['status', 'report-test-id', 'pending', null],
     ['update', 'report-test-id', { student_summary: 'ok' }],
+    ['status', 'report-test-id', 'success', null],
+  ]);
+});
+
+test('/api/generate marks report as failed when background generation throws', async () => {
+  const calls = [];
+  const response = await withMutedConsoleError(() =>
+    handleGenerateReportRequest(
+      createJsonRequest('http://localhost:3000/api/generate', {
+        province: '浙江',
+        score: '650',
+        rank: '8000',
+        subject_type: '物理类',
+        decision_maker: '家长',
+      }),
+      {
+        createId: () => 'report-failed-id',
+        createReport: (id, formData) => calls.push(['create', id, formData]),
+        generateReport: async () => {
+          throw new Error('AI 服务暂时不可用');
+        },
+        updateReportContent: (id, content) => calls.push(['update', id, content]),
+        updateReportStatus: (id, status, errorMessage = null) => calls.push(['status', id, status, errorMessage]),
+        runInBackground: async (task) => {
+          await task().catch(() => {});
+        },
+      }
+    )
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await readJson(response), {
+    success: true,
+    reportId: 'report-failed-id',
+  });
+
+  await Promise.resolve();
+  await Promise.resolve();
+
+  assert.deepEqual(calls, [
+    ['create', 'report-failed-id', {
+      province: '浙江',
+      score: '650',
+      rank: '8000',
+      subject_type: '物理类',
+      decision_maker: '家长',
+    }],
+    ['status', 'report-failed-id', 'pending', null],
+    ['status', 'report-failed-id', 'failed', 'AI 服务暂时不可用'],
   ]);
 });
 
@@ -158,9 +210,23 @@ test('/api/report/[id] masks sensitive fields for unpaid reports', async () => {
         id: 'report-1',
         paid: 0,
         amount: 999,
+        status: 'success',
+        error_message: null,
         created_at: '2026-03-27 10:00:00',
         form_data: { province: '浙江' },
         report_content: {
+          concise_report: {
+            summary: '适合以稳妥志愿为主。',
+            volunteer_table: [
+              {
+                priority: '本科普通批 第1志愿',
+                school: '浙江大学',
+                major: '计算机科学与技术',
+                fill_strategy: '冲刺',
+                note: '建议放在高位志愿。',
+              },
+            ],
+          },
           student_summary: '总结',
           family_summary: '家庭',
           strategy: { core: '核心', not_recommended: '不推荐', uncertainties: '不确定' },
@@ -174,6 +240,38 @@ test('/api/report/[id] masks sensitive fields for unpaid reports', async () => {
             grad_boost: '高',
           }],
           family_concerns: {},
+          recommendation_evidence: {
+            overall_judgment: '推荐依据充分。',
+            factors: [
+              {
+                title: '位次匹配',
+                analysis: '符合近年录取区间。',
+                evidence: '参考往年位次波动。',
+                conclusion: '可作为重点志愿。',
+              },
+            ],
+            school_major_rationales: [
+              {
+                school: '浙江大学',
+                major: '计算机科学与技术',
+                rationale: '学校平台强，专业出口稳定。',
+                evidence: '行业需求与城市资源支撑较强。',
+                risk_balance: '需接受更高竞争强度。',
+              },
+            ],
+          },
+          source_notes: {
+            summary: '综合参考了招生章程和就业质量报告。',
+            items: [
+              {
+                title: '浙江大学本科招生章程',
+                url: 'https://example.edu/zs',
+                snippet: '说明选考要求与录取规则。',
+                category: '招生',
+              },
+            ],
+            data_gaps: ['具体专业录取位次仍需复核'],
+          },
           employment_trends: { items: [] },
           final_notes: {},
         },
@@ -184,8 +282,45 @@ test('/api/report/[id] masks sensitive fields for unpaid reports', async () => {
   const payload = await readJson(response);
   assert.equal(response.status, 200);
   assert.equal(payload.paid, false);
+  assert.equal(payload.status, 'success');
+  assert.equal(payload.error_message, null);
+  assert.equal(payload.report.concise_report.volunteer_table[0].school, '***付费后查看***');
+  assert.equal(payload.report.recommendation_evidence.overall_judgment, '付费后查看...');
   assert.equal(payload.report.plans[0].school, '***付费后查看***');
   assert.equal(payload.report.strategy.not_recommended, '付费后查看');
+  assert.equal(payload.report.source_notes.summary, '付费后查看...');
+  assert.equal(payload.report.source_notes.items[0].title, '***付费后查看***');
+});
+
+test('/api/report/[id] returns failed generation state without masked content', async () => {
+  const response = await handleGetReportRequest(
+    new Request('http://localhost:3000/api/report/report-failed'),
+    { params: { id: 'report-failed' } },
+    {
+      getReport: () => ({
+        id: 'report-failed',
+        paid: 0,
+        amount: 999,
+        status: 'failed',
+        error_message: 'AI 服务暂时不可用',
+        created_at: '2026-03-27 10:00:00',
+        form_data: { province: '浙江' },
+        report_content: null,
+      }),
+    }
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await readJson(response), {
+    id: 'report-failed',
+    paid: false,
+    amount: 999,
+    status: 'failed',
+    error_message: 'AI 服务暂时不可用',
+    created_at: '2026-03-27 10:00:00',
+    form_data: { province: '浙江' },
+    report: null,
+  });
 });
 
 test('/api/pay/notify marks report as paid in dev mode', async () => {

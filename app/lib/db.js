@@ -7,6 +7,15 @@ const require = createRequire(import.meta.url);
 let db;
 let Database;
 
+function ensureColumn(database, tableName, columnName, columnDefinition) {
+  const columns = database.prepare(`PRAGMA table_info(${tableName})`).all();
+  const hasColumn = columns.some((column) => column.name === columnName);
+
+  if (!hasColumn) {
+    database.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`);
+  }
+}
+
 function getDatabaseConstructor() {
   if (!Database) {
     try {
@@ -38,6 +47,8 @@ function getDb() {
         id TEXT PRIMARY KEY,
         form_data TEXT NOT NULL,
         report_content TEXT,
+        status TEXT DEFAULT 'pending',
+        error_message TEXT,
         paid INTEGER DEFAULT 0,
         order_no TEXT,
         amount INTEGER DEFAULT 999,
@@ -45,6 +56,9 @@ function getDb() {
         paid_at TEXT
       );
     `);
+
+    ensureColumn(db, 'reports', 'status', "TEXT DEFAULT 'pending'");
+    ensureColumn(db, 'reports', 'error_message', 'TEXT');
   }
   return db;
 }
@@ -52,18 +66,26 @@ function getDb() {
 export function createReport(id, formData) {
   const db = getDb();
   const stmt = db.prepare(
-    'INSERT INTO reports (id, form_data) VALUES (?, ?)'
+    'INSERT INTO reports (id, form_data, status, error_message) VALUES (?, ?, ?, ?)'
   );
-  stmt.run(id, JSON.stringify(formData));
+  stmt.run(id, JSON.stringify(formData), 'pending', null);
   return id;
 }
 
 export function updateReportContent(id, content) {
   const db = getDb();
   const stmt = db.prepare(
-    'UPDATE reports SET report_content = ? WHERE id = ?'
+    'UPDATE reports SET report_content = ?, error_message = NULL WHERE id = ?'
   );
   stmt.run(JSON.stringify(content), id);
+}
+
+export function updateReportStatus(id, status, errorMessage = null) {
+  const db = getDb();
+  const stmt = db.prepare(
+    'UPDATE reports SET status = ?, error_message = ? WHERE id = ?'
+  );
+  stmt.run(status, errorMessage, id);
 }
 
 export function getReport(id) {

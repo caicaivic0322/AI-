@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import { getReportViewState, shouldPollReport } from '../../lib/report-view-state.mjs';
 
 const PDF_SLOGAN = ['0信息差', '100%量身定制', '更可信的高考志愿推荐'];
 const PDF_SITE_URL = 'https://www.gaokao.cn';
@@ -233,12 +234,14 @@ export default function ReportPage() {
   const [error, setError] = useState('');
   const [showPay, setShowPay] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
+  const [viewMode, setViewMode] = useState('concise');
 
   const fetchReport = useCallback(async () => {
     try {
       const res = await fetch(`/api/report/${reportId}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      setError('');
       setReport(data);
     } catch (err) {
       setError(err.message);
@@ -251,14 +254,35 @@ export default function ReportPage() {
     fetchReport();
   }, [fetchReport]);
 
+  useEffect(() => {
+    if (!shouldPollReport(report)) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      fetchReport();
+    }, 3000);
+
+    return () => window.clearInterval(timer);
+  }, [fetchReport, report]);
+
   const handlePaySuccess = () => {
     setShowPay(false);
     setLoading(true);
     fetchReport();
   };
 
-  const handleExportPdf = async () => {
-    window.print();
+  const handleRetryFetch = () => {
+    setLoading(true);
+    fetchReport();
+  };
+
+  const handleUnlock = () => {
+    setShowPay(true);
+  };
+
+  const handleExportPdf = async (mode) => {
+    window.location.href = `/api/report/${reportId}/pdf?mode=${mode}`;
   };
 
   const handleShare = async () => {
@@ -287,34 +311,51 @@ export default function ReportPage() {
     return () => window.clearTimeout(timer);
   }, [shareMessage]);
 
-  if (loading) {
+  const viewState = getReportViewState({ loading, error, report });
+
+  if (viewState.kind === 'loading') {
     return (
       <div className="loading-page">
         <div className="loading-spinner" />
-        <div className="loading-text">加载报告中...</div>
+        <div className="loading-text">{viewState.title}</div>
       </div>
     );
   }
 
-  if (error) {
+  if (viewState.kind === 'error') {
     return (
       <div className="loading-page">
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '3rem', marginBottom: 16 }}>😞</div>
-          <div className="loading-text">{error}</div>
+          <div className="loading-text">{viewState.title}</div>
           <button className="btn btn-secondary" style={{ marginTop: 24 }} onClick={() => window.location.href = '/'}>返回首页</button>
         </div>
       </div>
     );
   }
 
-  if (!report || !report.report) {
+  if (viewState.kind === 'failed') {
+    return (
+      <div className="loading-page">
+        <div style={{ textAlign: 'center', maxWidth: 360 }}>
+          <div style={{ fontSize: '3rem', marginBottom: 16 }}>⚠️</div>
+          <div className="loading-text">{viewState.title}</div>
+          <div className="loading-subtext" style={{ marginTop: 12 }}>{viewState.detail}</div>
+          <button className="btn btn-secondary" style={{ marginTop: 24 }} onClick={handleRetryFetch}>重新获取状态</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (viewState.kind === 'pending') {
     return (
       <div className="loading-page">
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '3rem', marginBottom: 16 }}>📋</div>
-          <div className="loading-text">报告正在生成中...</div>
-          <div className="loading-subtext">请稍后刷新页面</div>
+          <div className="loading-text">{viewState.title}</div>
+          <div className="loading-subtext">{viewState.detail}</div>
+          <div className="loading-subtext" style={{ marginTop: 8 }}>页面会自动刷新最新结果</div>
+          <button className="btn btn-secondary" style={{ marginTop: 24 }} onClick={handleRetryFetch}>立即刷新</button>
         </div>
       </div>
     );
@@ -331,7 +372,8 @@ export default function ReportPage() {
         <p>生成时间：{report.created_at}</p>
         {isPaid && (
           <div className="report-actions no-print">
-            <button className="btn btn-report-action" onClick={handleExportPdf}>导出 PDF</button>
+            <button className="btn btn-report-action" onClick={() => handleExportPdf('concise')}>下载简明版 PDF</button>
+            <button className="btn btn-report-action" onClick={() => handleExportPdf('full')}>下载全面版 PDF</button>
             <button className="btn btn-report-action" onClick={handleShare}>一键转发</button>
           </div>
         )}
@@ -354,6 +396,72 @@ export default function ReportPage() {
             </div>
           </section>
         )}
+
+        <div className="report-section fade-in-up no-print">
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+            <button
+              className={`btn ${viewMode === 'concise' ? 'btn-gold' : 'btn-report-action'}`}
+              onClick={() => setViewMode('concise')}
+            >
+              简明版
+            </button>
+            <button
+              className={`btn ${viewMode === 'full' ? 'btn-gold' : 'btn-report-action'}`}
+              onClick={() => setViewMode('full')}
+            >
+              全面版
+            </button>
+          </div>
+          <p style={{ color: '#64748B', fontSize: '0.875rem', margin: 0 }}>
+            简明版适合先看最终志愿排序，全面版适合核对分析逻辑和推荐依据。
+          </p>
+        </div>
+
+        {blurred && (
+          <div className="report-section fade-in-up no-print" style={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.05rem' }}>解锁完整报告</h2>
+                <p style={{ color: '#64748B', fontSize: '0.875rem', margin: '8px 0 0' }}>
+                  查看完整学校与专业推荐、详细判断依据，以及 PDF 下载。
+                </p>
+              </div>
+              <button className="btn btn-gold" onClick={handleUnlock}>
+                立即付费 ¥{(report.amount / 100).toFixed(2)}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {viewMode === 'concise' && (
+          <div className={`report-section fade-in-up ${blurred ? 'blur-overlay' : ''}`}>
+            <div className={blurred ? 'blur-content' : ''}>
+              <h2><span className="section-icon">🧾</span> 简明版志愿表</h2>
+              <p className="report-paragraph">{r.concise_report?.summary}</p>
+              <div style={{ display: 'grid', gap: 12 }}>
+                {(r.concise_report?.volunteer_table || []).map((item, index) => (
+                  <div key={`${item.priority}-${index}`} className="plan-card plan-balanced">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+                      <strong>{item.priority}</strong>
+                      <span className="plan-type">{item.fill_strategy}</span>
+                    </div>
+                    <div className="plan-school">{item.school}</div>
+                    <div className="plan-major">{item.major}</div>
+                    <p style={{ color: '#475569', marginTop: 10, marginBottom: 0 }}>{item.note}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {blurred && (
+              <div className="blur-cta">
+                <button className="btn btn-gold" onClick={handleUnlock}>解锁完整报告</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {viewMode === 'full' && (
+          <>
 
         {/* Section 1: Student Summary */}
         <div className="report-section fade-in-up">
@@ -399,7 +507,7 @@ export default function ReportPage() {
         {/* Unlock CTA for unpaid */}
         {blurred && (
           <div style={{ textAlign: 'center', padding: '16px 0 32px' }}>
-            <button className="btn btn-gold btn-lg" onClick={() => setShowPay(true)}>
+            <button className="btn btn-gold btn-lg" onClick={handleUnlock}>
               🔓 解锁完整报告 ¥{(report.amount / 100).toFixed(2)}
             </button>
             <p style={{ fontSize: '0.8125rem', color: '#94A3B8', marginTop: 12 }}>
@@ -450,12 +558,81 @@ export default function ReportPage() {
           {blurred && <div className="blur-cta"><p>付费后查看</p></div>}
         </div>
 
+        <div className={`report-section fade-in-up ${blurred ? 'blur-overlay' : ''}`}>
+          <div className={blurred ? 'blur-content' : ''}>
+            <h2><span className="section-icon">🔎</span> 参考来源</h2>
+            <p className="report-paragraph">{r.source_notes?.summary}</p>
+            <div style={{ display: 'grid', gap: 16 }}>
+              {(r.source_notes?.items || []).map((item, index) => (
+                <div key={`${item.url || item.title}-${index}`} className="plan-card plan-balanced">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+                    <strong>{item.title}</strong>
+                    <span className="plan-type">{item.category}</span>
+                  </div>
+                  <p style={{ color: '#334155', marginBottom: 10 }}>{item.snippet}</p>
+                  <a href={item.url} target="_blank" rel="noreferrer" style={{ color: '#1D4ED8', wordBreak: 'break-all' }}>
+                    {item.url}
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+          {blurred && <div className="blur-cta"><p>付费后查看</p></div>}
+        </div>
+
+        <div className={`report-section fade-in-up ${blurred ? 'blur-overlay' : ''}`}>
+          <div className={blurred ? 'blur-content' : ''}>
+            <h2><span className="section-icon">🧠</span> 推荐依据与判断</h2>
+            <p className="report-paragraph">{r.recommendation_evidence?.overall_judgment}</p>
+            <div style={{ display: 'grid', gap: 16 }}>
+              {(r.recommendation_evidence?.factors || []).map((item, index) => (
+                <div key={`${item.title}-${index}`} className="report-section" style={{ marginBottom: 0 }}>
+                  <h3 style={{ marginTop: 0, marginBottom: 10 }}>{item.title}</h3>
+                  <div className="report-item">
+                    <span className="report-item-label">分析：</span>
+                    <span className="report-item-value">{item.analysis}</span>
+                  </div>
+                  <div className="report-item">
+                    <span className="report-item-label">依据：</span>
+                    <span className="report-item-value">{item.evidence}</span>
+                  </div>
+                  <div className="report-item">
+                    <span className="report-item-label">结论：</span>
+                    <span className="report-item-value">{item.conclusion}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gap: 16, marginTop: 20 }}>
+              {(r.recommendation_evidence?.school_major_rationales || []).map((item, index) => (
+                <div key={`${item.school}-${item.major}-${index}`} className="plan-card plan-balanced">
+                  <div className="plan-school">{item.school}</div>
+                  <div className="plan-major">{item.major}</div>
+                  <div className="report-item">
+                    <span className="report-item-label">推荐理由：</span>
+                    <span className="report-item-value">{item.rationale}</span>
+                  </div>
+                  <div className="report-item">
+                    <span className="report-item-label">有力凭据：</span>
+                    <span className="report-item-value">{item.evidence}</span>
+                  </div>
+                  <div className="report-item">
+                    <span className="report-item-label">风险平衡：</span>
+                    <span className="report-item-value">{item.risk_balance}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {blurred && <div className="blur-cta"><p>付费后查看</p></div>}
+        </div>
+
         {/* Section 7: Final Notes */}
         <div className={`report-section fade-in-up ${blurred ? 'blur-overlay' : ''}`}>
           <div className={blurred ? 'blur-content' : ''}>
             <h2><span className="section-icon">📝</span> 最终提醒</h2>
             <div className="report-item">
-              <span className="report-item-label">需核实数据：</span>
+              <span className="report-item-label">使用提示：</span>
               <span className="report-item-value">{r.final_notes?.data_to_verify}</span>
             </div>
             <div className="report-item">
@@ -475,6 +652,8 @@ export default function ReportPage() {
           <div style={{ textAlign: 'center', padding: '24px 0', color: '#10B981', fontWeight: 600 }}>
             ✅ 已解锁完整报告
           </div>
+        )}
+          </>
         )}
       </div>
 

@@ -1,7 +1,18 @@
 import { jsonResponse } from './response-utils.mjs';
+import { sanitizeReportForUserDisplay } from '../report-presentation.mjs';
 
 function buildMaskedReport(report) {
   return report.report_content ? {
+    concise_report: {
+      summary: '付费后查看...',
+      volunteer_table: (report.report_content.concise_report?.volunteer_table || []).map((item) => ({
+        priority: item.priority,
+        school: '***付费后查看***',
+        major: '***付费后查看***',
+        fill_strategy: item.fill_strategy,
+        note: '付费后查看...',
+      })),
+    },
     student_summary: report.report_content.student_summary,
     family_summary: report.report_content.family_summary,
     strategy: {
@@ -28,6 +39,32 @@ function buildMaskedReport(report) {
       graduate_school: '付费后查看...',
       soe_opportunity: '付费后查看...',
       location_advice: '付费后查看...',
+    },
+    recommendation_evidence: {
+      overall_judgment: '付费后查看...',
+      factors: (report.report_content.recommendation_evidence?.factors || []).map((item) => ({
+        title: item.title,
+        analysis: '付费后查看...',
+        evidence: '付费后查看...',
+        conclusion: '付费后查看...',
+      })),
+      school_major_rationales: (report.report_content.recommendation_evidence?.school_major_rationales || []).map((item) => ({
+        school: '***付费后查看***',
+        major: '***付费后查看***',
+        rationale: '付费后查看...',
+        evidence: '付费后查看...',
+        risk_balance: '付费后查看...',
+      })),
+    },
+    source_notes: {
+      summary: '付费后查看...',
+      items: (report.report_content.source_notes?.items || []).map((item) => ({
+        title: '***付费后查看***',
+        url: '***付费后查看***',
+        snippet: '付费后查看...',
+        category: item.category,
+      })),
+      data_gaps: (report.report_content.source_notes?.data_gaps || []).map(() => '付费后查看...'),
     },
     employment_trends: {
       overview: '付费后查看...',
@@ -69,6 +106,8 @@ export async function handleGetReportRequest(request, { params }, dependencies) 
         id: report.id,
         paid: false,
         amount: report.amount,
+        status: report.status || 'pending',
+        error_message: report.error_message || null,
         created_at: report.created_at,
         form_data: report.form_data,
         report: buildMaskedReport(report),
@@ -78,9 +117,11 @@ export async function handleGetReportRequest(request, { params }, dependencies) 
     return jsonResponse({
       id: report.id,
       paid: true,
+      status: report.status || 'success',
+      error_message: report.error_message || null,
       created_at: report.created_at,
       form_data: report.form_data,
-      report: report.report_content,
+      report: sanitizeReportForUserDisplay(report.report_content),
     });
   } catch (error) {
     console.error('Report fetch error:', error);

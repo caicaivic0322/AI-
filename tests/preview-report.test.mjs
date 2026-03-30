@@ -17,8 +17,16 @@ test('buildPreviewReport creates a full report structure from form data', () => 
 
   assert.equal(report.student_summary.includes('浙江'), true);
   assert.equal(report.family_summary.includes('家长'), true);
+  assert.equal(typeof report.concise_report.summary, 'string');
+  assert.equal(Array.isArray(report.concise_report.volunteer_table), true);
+  assert.equal(report.concise_report.volunteer_table.length > 0, true);
   assert.equal(Array.isArray(report.plans), true);
   assert.equal(report.plans.length > 0, true);
+  assert.equal(typeof report.recommendation_evidence.overall_judgment, 'string');
+  assert.equal(Array.isArray(report.recommendation_evidence.school_major_rationales), true);
   assert.equal(Array.isArray(report.employment_trends.items), true);
+  assert.equal(typeof report.source_notes.summary, 'string');
+  assert.equal(Array.isArray(report.source_notes.items), true);
+  assert.equal(Array.isArray(report.source_notes.data_gaps), true);
   assert.equal(typeof report.final_notes.next_steps, 'string');
 });

@@ -7,6 +7,7 @@ export async function handleGenerateReportRequest(request, dependencies) {
     createId,
     createReport,
     updateReportContent,
+    updateReportStatus = () => {},
     generateReport,
     previewMode = false,
     buildPreviewReport,
@@ -32,10 +33,12 @@ export async function handleGenerateReportRequest(request, dependencies) {
 
     const reportId = createId();
     createReport(reportId, formData);
+    updateReportStatus(reportId, 'pending', null);
 
     if (previewMode) {
       const reportContent = buildPreviewReport(formData);
       updateReportContent(reportId, reportContent);
+      updateReportStatus(reportId, 'success', null);
 
       if (markReportPaid) {
         markReportPaid(reportId, createPreviewOrderNo(reportId));
@@ -49,8 +52,14 @@ export async function handleGenerateReportRequest(request, dependencies) {
     }
 
     runInBackground(async () => {
-      const reportContent = await generateReport(formData);
-      updateReportContent(reportId, reportContent);
+      try {
+        const reportContent = await generateReport(formData);
+        updateReportContent(reportId, reportContent);
+        updateReportStatus(reportId, 'success', null);
+      } catch (error) {
+        updateReportStatus(reportId, 'failed', error.message || '生成失败，请稍后重试');
+        throw error;
+      }
     });
 
     return jsonResponse({
