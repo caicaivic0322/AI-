@@ -93,7 +93,9 @@ test('getFormModeOptions exposes standalone entry page cards', () => {
   assert.equal(options.length, 2);
   assert.equal(options[0].href, '/form/guided');
   assert.equal(options[1].href, '/form/auto');
-  assert.equal(options[0].highlights.includes('更多自主选择，如地域偏好和未来规划路径。更适合对未来有清晰规划的学生和家长'), true);
+  assert.equal(options[0].label, '量身定制');
+  assert.equal(options[1].label, '自动规划');
+  assert.equal(options[0].highlights.includes('更多自主选择，更适合对未来有规划的学生和家长'), true);
   assert.equal(options[1].highlights.includes('输入更少，更适合对未来没有清晰规划的学生和家长'), true);
 });
 
