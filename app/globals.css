@@ -2010,41 +2010,39 @@ h1, h2, h3 { font-family: var(--font-display); line-height: 1.3; font-weight: 70
   }
 
   .form-mode-card-head {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: start;
-    column-gap: 14px;
-    row-gap: 0;
-    min-height: 92px;
-    margin-bottom: 4px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 10px;
   }
 
   .form-mode-badge {
-    grid-column: 1;
-    grid-row: 1;
-    align-self: start;
+    flex-shrink: 0;
     margin-top: 2px;
   }
 
   .form-mode-label {
-    grid-column: 2;
-    grid-row: 1;
-    max-width: 6em;
+    max-width: 6.6em;
+    margin-left: auto;
     text-align: right;
-    justify-self: end;
-    align-self: start;
-    font-size: 1.7rem;
-    line-height: 1.04;
+    font-size: 1.95rem;
+    line-height: 1;
+    letter-spacing: 0.01em;
   }
 
   .form-mode-card strong {
-    margin-top: 2px;
-    line-height: 1.5;
+    margin-top: 4px;
+    margin-bottom: 6px;
+    font-size: 1.06rem;
+    line-height: 1.6;
   }
 
   .form-mode-card p {
-    margin-top: -2px;
-    line-height: 1.62;
+    margin-top: 0;
+    margin-bottom: 6px;
+    font-size: 0.86rem;
+    line-height: 1.78;
   }
 
   .form-mode-card,
