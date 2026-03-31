@@ -388,16 +388,16 @@ function StepAutoPlan({ data, onChange }) {
       <div className="form-mode-panel auto">
         <div className="form-mode-panel-head">
           <span className="form-mode-mini-badge">AI 全自动规划</span>
-          <h3>你先不用想城市、学校和专业</h3>
+          <h3>你先不用急着选城市、学校和专业</h3>
         </div>
         <p>
-          只告诉我们你更擅长哪些学科，AI 会结合你的分数、位次和录取可能，
-          自动推断更适合的学校层次、专业方向、就业节奏与入学后的发展路径。
+          先把成绩、位次、选科和你更擅长的学科告诉我们，
+          AI 会先替你缩小方向范围，再补齐学校层次、专业路线、录取组合和入学后的发展建议。
         </p>
         <div className="form-mode-auto-notes">
-          <span>自动补齐默认偏好</span>
+          <span>先缩小选择范围</span>
           <span>自动形成冲稳保组合</span>
-          <span>自动给出就业与升学建议</span>
+          <span>补齐就业与升学规划</span>
         </div>
       </div>
 
@@ -427,15 +427,15 @@ const FORM_MODE_OPTIONS = [
     badge: '更细致',
     title: '我有一些偏好，想自己把条件说清楚',
     description: '适合已经对城市、学校层次、发展路径有初步想法的人。',
-    highlights: ['可填写地域偏好', '可排序未来路径', '报告更贴近个人意愿'],
+    highlights: ['更多自主选择', '如地域偏好和未来规划路径', '更适合对未来有清晰规划的学生和家长'],
   },
   {
     value: 'auto',
     label: '让 AI 全自动规划',
     badge: '更省事',
-    title: '我还没想清楚方向，让 AI 先帮我规划',
-    description: '只填核心信息和擅长科目，AI 自动完成学校、专业与就业路径推演。',
-    highlights: ['输入更少', '自动补齐缺失偏好', '更适合一头雾水的家长和学生'],
+    title: '我先不用做选择，让 AI 帮我缩小范围',
+    description: '只填核心成绩信息和擅长科目，AI 会先帮你判断适合冲什么、稳什么、保什么。',
+    highlights: ['输入更少', '更适合对未来没有清晰规划的学生和家长'],
   },
 ];
 
@@ -565,8 +565,8 @@ export default function FormPage() {
           <div className="loading-icon">🎓</div>
         </div>
         <div>
-          <div className="loading-text">{formMode === 'auto' ? 'AI 正在全自动规划志愿方案' : '正在为你生成志愿分析报告'}</div>
-          <div className="loading-subtext">{formMode === 'auto' ? 'AI 正在从分数、位次和擅长科目出发，补齐适合你的学校、专业和发展路径…' : 'AI 正在综合分析你的分数、偏好和路径匹配度…'}</div>
+          <div className="loading-text">{formMode === 'auto' ? 'AI 正在先帮你缩小志愿范围' : '正在为你生成志愿分析报告'}</div>
+          <div className="loading-subtext">{formMode === 'auto' ? 'AI 正在从分数、位次和擅长科目出发，逐步推断更适合的学校层次、专业方向和后续路径…' : 'AI 正在综合分析你的分数、偏好和路径匹配度…'}</div>
         </div>
         <div className="loading-steps">
           {loadingItems.map((item, index) => {
