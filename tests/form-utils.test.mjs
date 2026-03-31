@@ -9,6 +9,8 @@ import {
   formatHomeProvincePreference,
   buildSubmitPayload,
   getFormFlowConfig,
+  getFormModeOptions,
+  normalizeFormMode,
 } from '../app/lib/form-utils.mjs';
 
 test('toggleDelimitedSelection adds and removes city values', () => {
@@ -81,4 +83,22 @@ test('getFormFlowConfig exposes shorter step flow for auto mode', () => {
   assert.equal(guided.steps.length, 4);
   assert.equal(auto.steps.length, 2);
   assert.deepEqual(auto.steps.map((step) => step.id), ['basic', 'student']);
+  assert.equal(auto.helperText[0].includes('先不用想学校和专业'), true);
+  assert.equal(auto.helperText[1].includes('不需要先选城市或学校'), true);
+});
+
+test('getFormModeOptions exposes standalone entry page cards', () => {
+  const options = getFormModeOptions();
+
+  assert.equal(options.length, 2);
+  assert.equal(options[0].href, '/form/guided');
+  assert.equal(options[1].href, '/form/auto');
+  assert.equal(options[0].highlights.includes('更多自主选择，如地域偏好和未来规划路径。更适合对未来有清晰规划的学生和家长'), true);
+  assert.equal(options[1].highlights.includes('输入更少，更适合对未来没有清晰规划的学生和家长'), true);
+});
+
+test('normalizeFormMode keeps supported routes and falls back to guided', () => {
+  assert.equal(normalizeFormMode('guided'), 'guided');
+  assert.equal(normalizeFormMode('auto'), 'auto');
+  assert.equal(normalizeFormMode('unknown'), 'guided');
 });

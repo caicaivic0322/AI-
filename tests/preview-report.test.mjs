@@ -30,3 +30,18 @@ test('buildPreviewReport creates a full report structure from form data', () => 
   assert.equal(Array.isArray(report.source_notes.data_gaps), true);
   assert.equal(typeof report.final_notes.next_steps, 'string');
 });
+
+test('buildPreviewReport adjusts tone for auto mode users without clear preferences', () => {
+  const report = buildPreviewReport({
+    province: '浙江',
+    score: '602',
+    rank: '23010',
+    subject_type: '物理类',
+    strong_subjects: ['数学', '物理'],
+    form_mode: 'auto',
+  });
+
+  assert.equal(report.concise_report.summary.includes('先不用急着决定学校和专业'), true);
+  assert.equal(report.family_summary.includes('先不要求你提前给出城市、院校和专业答案'), true);
+  assert.equal(report.source_notes.summary.includes('自动模式'), true);
+});

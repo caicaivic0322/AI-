@@ -126,14 +126,43 @@ const GUIDED_HELPER_TEXT = [
 ];
 
 const AUTO_HELPER_TEXT = [
-  '只需要告诉我们成绩、位次和选科，先建立最基础的竞争力画像。',
-  '再补充你更擅长的学科，AI 会自动推断更适合的专业方向、录取组合与就业路径。',
+  '先不用想学校和专业，只需要告诉我们成绩、位次和选科，AI 会先建立你的基础竞争力画像。',
+  '再补充你更擅长的学科，不需要先选城市或学校，AI 会自动缩小范围并推断更适合的方向。',
 ];
 
 const DEFAULT_AUTO_PATH_PRIORITY = ['本科直接就业', '市场化高薪', '考研深造', '国企 / 央企', '考公 / 考编'];
 
+const FORM_MODE_OPTIONS = [
+  {
+    value: 'guided',
+    href: '/form/guided',
+    label: '我自己细化填写',
+    badge: '更细致',
+    title: '我有一些偏好，想自己把条件说清楚',
+    description: '适合已经对城市、学校层次、发展路径有初步想法的人。',
+    highlights: ['更多自主选择，如地域偏好和未来规划路径。更适合对未来有清晰规划的学生和家长'],
+  },
+  {
+    value: 'auto',
+    href: '/form/auto',
+    label: '让 AI 全自动规划',
+    badge: '更省事',
+    title: '我先不用做选择，让 AI 帮我缩小范围',
+    description: '只填核心成绩信息和擅长科目，AI 会先帮你判断适合冲什么、稳什么、保什么。',
+    highlights: ['输入更少，更适合对未来没有清晰规划的学生和家长'],
+  },
+];
+
+export function normalizeFormMode(mode = 'guided') {
+  return mode === 'auto' ? 'auto' : 'guided';
+}
+
+export function getFormModeOptions() {
+  return FORM_MODE_OPTIONS;
+}
+
 export function getFormFlowConfig(mode = 'guided') {
-  const normalizedMode = mode === 'auto' ? 'auto' : 'guided';
+  const normalizedMode = normalizeFormMode(mode);
 
   return normalizedMode === 'auto'
     ? {

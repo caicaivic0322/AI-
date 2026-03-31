@@ -62,7 +62,7 @@ export function buildPreviewReport(formData = {}) {
   return {
     concise_report: {
       summary: isAutoMode
-        ? `在缺少明确个人偏好的前提下，建议先用${province}${subjectType}的分数与位次建立“冲稳保”组合，再由 AI 从优势学科反推更合适的专业和学校层次。`
+        ? `在缺少明确个人偏好的前提下，先不用急着决定学校和专业。建议先用${province}${subjectType}的分数与位次建立“冲稳保”组合，再由 AI 从优势学科反推更合适的专业和学校层次。`
         : `结合${province}${subjectType}的分数与位次，当前更适合采用“1 个冲刺 + 1 个稳妥 + 1 个保底”的志愿组合，先锁定结果，再优化学校与专业匹配度。`,
       volunteer_table: [
         buildConciseVolunteer('本科普通批 第1志愿', '杭州电子科技大学', '计算机科学与技术', '冲刺', '适合作为高位尝试，兼顾城市资源与专业热度。'),
@@ -72,7 +72,7 @@ export function buildPreviewReport(formData = {}) {
     },
     student_summary: `你当前位于${province}${subjectType}志愿决策区间，参考分数 ${score}、位次 ${rank}，适合采用“冲稳保”组合来平衡录取率与未来发展。`,
     family_summary: isAutoMode
-      ? `当前暂无明确城市和院校偏好，建议由 AI 先以结果确定性、就业出口与专业适配度为主线，自动补齐学校和专业筛选逻辑。`
+      ? `当前先不要求你提前给出城市、院校和专业答案，建议由 AI 先以结果确定性、就业出口与专业适配度为主线，自动补齐学校和专业筛选逻辑。`
       : `${decisionMaker}更关注结果确定性与长期收益，建议以${pathPriority}为主线，同时把${cityPreference}与${schoolPreference}纳入最终筛选。`,
     strategy: {
       core: `优先选择就业出口稳定、行业趋势清晰、城市资源匹配度更高的专业方向，再在可报范围内优化学校层次与录取概率。`,
@@ -124,7 +124,9 @@ export function buildPreviewReport(formData = {}) {
       ],
     },
     source_notes: {
-      summary: '预览模式下展示的是示例来源结构；真实报告会补充招生章程、录取信息与就业质量材料作为证据链。',
+      summary: isAutoMode
+        ? '自动模式下展示的是示例来源结构；真实报告会继续补充招生章程、录取信息与就业质量材料，帮助你在没有明确偏好时逐步缩小范围。'
+        : '预览模式下展示的是示例来源结构；真实报告会补充招生章程、录取信息与就业质量材料作为证据链。',
       items: [
         {
           title: '阳光高考院校库与招生信息',
