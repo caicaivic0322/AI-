@@ -2011,11 +2011,20 @@ h1, h2, h3 { font-family: var(--font-display); line-height: 1.3; font-weight: 70
 
   .form-mode-card-head {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .form-mode-badge {
+    align-self: flex-start;
   }
 
   .form-mode-label {
-    font-size: 1.18rem;
+    width: 100%;
+    text-align: right;
+    align-self: flex-end;
+    font-size: 1.52rem;
+    line-height: 1.12;
   }
 
   .form-mode-card,
