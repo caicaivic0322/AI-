@@ -1,171 +1,138 @@
 import Link from 'next/link';
-import { getHomepageNews } from './lib/homepage-news.mjs';
+import { AppBottomNav, BrandMark } from './components/AppChrome';
 
-const HERO_FEATURES = ['位次与梯度校准', '专业与就业联看', '家庭沟通更省心'];
-
-const HERO_METRICS = [
-  { value: '30 秒', label: '生成首版分析', detail: '先看方向，再看细节' },
-  { value: '4 步', label: '完成核心信息', detail: '输入简单，重点不遗漏' },
-  { value: '冲稳保', label: '给出差异化组合', detail: '兼顾录取率与长期发展' },
+const FEATURE_CARDS = [
+  {
+    title: '数据权威',
+    desc: '官方政策与高校数据持续更新',
+    icon: 'shield',
+  },
+  {
+    title: '智能匹配',
+    desc: '多维算法联看分数、专业与城市',
+    icon: 'target',
+  },
+  {
+    title: '方案清晰',
+    desc: '冲稳保结构一眼看懂，便于和家长沟通',
+    icon: 'bars',
+  },
 ];
 
-const HERO_POINTS = [
-  '覆盖分数、位次、专业兴趣、城市偏好与家庭诉求',
-  '输出可读结论，不堆术语，适合和家长一起讨论',
-  '同步参考最新政策与高校招考快讯，降低信息差',
+const STEPS = [
+  { no: '1', title: '填写信息', desc: '成绩与偏好' },
+  { no: '2', title: '智能分析', desc: '生成方向' },
+  { no: '3', title: '查看结果', desc: '调整与优化' },
 ];
 
-function AnimatedTitle() {
-  const lines = [
-    { text: '0信息差', accent: false, baseDelay: 0.3, key: 'a' },
-    { text: '100%量身定制', accent: true, baseDelay: 0.6, key: 'b' },
-    { text: '更可信的高考志愿推荐', accent: false, baseDelay: 0.9, key: 'c' },
-  ];
+function FeatureIcon({ type }) {
+  if (type === 'target') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="8.5" />
+        <circle cx="12" cy="12" r="3.5" />
+        <path d="M12 3.5V7" />
+        <path d="M20.5 12H17" />
+      </svg>
+    );
+  }
+
+  if (type === 'bars') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 19V10" />
+        <path d="M12 19V5" />
+        <path d="M18 19v-7" />
+      </svg>
+    );
+  }
 
   return (
-    <h1>
-      {lines.map((line, lineIndex) => (
-        <span key={line.key} className={line.accent ? 'accent hero-line' : 'hero-line'}>
-          {line.text.split('').map((char, i) => (
-            <span
-              key={`${line.key}${i}`}
-              className="char"
-              style={{ animationDelay: `${line.baseDelay + i * 0.05}s` }}
-            >
-              {char === ' ' ? '\u00A0' : char}
-            </span>
-          ))}
-          {lineIndex < lines.length - 1 && <br />}
-        </span>
-      ))}
-    </h1>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3.5 18.5 6v5c0 4.1-2.5 7.3-6.5 9.5-4-2.2-6.5-5.4-6.5-9.5V6L12 3.5Z" />
+      <path d="m10.2 11.8 1.4 1.4 2.6-3" />
+    </svg>
   );
 }
 
-export default async function HomePage() {
-  const newsItems = await getHomepageNews();
-
+export default function HomePage() {
   return (
-    <section className="hero">
-      <div className="hero-orb hero-orb-1" />
-      <div className="hero-orb hero-orb-2" />
-      <div className="hero-rings" />
-
-      {/* Notebook-style horizontal lines */}
-      <div className="hero-grid" />
-
-      {/* Gold bottom line */}
-      <div className="hero-accent-line" />
-
-      <div className="hero-content">
-        <div className="hero-shell">
-          <div className="hero-main">
-            <div className="hero-badge">
-              2026 高考志愿 · 智能分析
-            </div>
-
-            <AnimatedTitle />
-
-            <p className="hero-subtitle">
-              基于政策、录取率与趋势判断，
-              以就业结果为导向，规划更优高考志愿。
-            </p>
-
-            <div className="hero-cta-row">
-              <div className="hero-cta">
-                <Link className="btn btn-lg" href="/form">
-                  <span>开始填报分析</span>
-                  <span className="btn-arrow">→</span>
-                </Link>
+    <main className="ios-scene">
+      <div className="phone-shell">
+        <section className="app-screen home-screen">
+          <header className="screen-top home-top">
+            <div className="brand-lockup">
+              <BrandMark />
+              <div>
+                <strong>高考志愿</strong>
+                <span>智能规划</span>
               </div>
+            </div>
+            <Link href="/form" className="guide-link">
+              <span className="guide-link-icon">◎</span>
+              <span>新手指南</span>
+            </Link>
+          </header>
 
-              <a className="hero-secondary-link" href="#hero-news">
-                先看最新政策
-              </a>
+          <section className="hero-card">
+            <div className="hero-copy">
+              <div className="hero-chip">2026 高考</div>
+              <h1>科学规划志愿 更合适的大学与专业</h1>
+              <p>基于政策、数据与算法，为你生成个性化志愿方案。</p>
             </div>
 
-            <div className="hero-metrics" aria-label="产品亮点">
-              {HERO_METRICS.map((item, index) => (
-                <div
-                  key={item.label}
-                  className="hero-metric"
-                  style={{ animationDelay: `${1 + index * 0.12}s` }}
-                >
-                  <strong>{item.value}</strong>
-                  <span>{item.label}</span>
-                  <small>{item.detail}</small>
-                </div>
-              ))}
+            <div className="hero-visual" aria-hidden="true">
+              <div className="hero-book-stack">
+                <span className="book book-top" />
+                <span className="book book-mid" />
+                <span className="book book-base" />
+                <span className="cap-top" />
+                <span className="cap-bottom" />
+                <span className="cap-tassel" />
+              </div>
             </div>
+          </section>
 
-            <div className="hero-points" aria-label="核心能力">
-              {HERO_POINTS.map((point, index) => (
-                <div
-                  key={point}
-                  className="hero-point"
-                  style={{ animationDelay: `${1.06 + index * 0.12}s` }}
-                >
-                  <span className="hero-point-dot" />
-                  <span>{point}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="hero-features">
-              {HERO_FEATURES.map((feature, index) => (
-                <div
-                  key={feature}
-                  className="hero-feature"
-                  style={{ animationDelay: `${1.18 + index * 0.12}s` }}
-                >
-                  <span className="hero-feature-text">{feature}</span>
-                </div>
-              ))}
-            </div>
+          <div className="hero-actions">
+            <Link className="primary-cta" href="/form">
+              <span>开始智能规划</span>
+              <span aria-hidden="true">→</span>
+            </Link>
+            <p>仅需 3 步，生成你的志愿方案</p>
           </div>
 
-          <aside id="hero-news" className="hero-briefs" aria-label="2026 高考政策与高校快讯">
-            <div className="hero-briefs-head">
-              <div>
-                <span>2026 最新速览</span>
-                <strong>政策与高校招考快讯</strong>
-              </div>
-              <p>聚合政策、招办动态与高校新闻，先把变化看清楚。</p>
-            </div>
+          <section className="feature-grid" aria-label="核心能力">
+            {FEATURE_CARDS.map((item) => (
+              <article key={item.title} className="feature-card">
+                <div className="feature-icon">
+                  <FeatureIcon type={item.icon} />
+                </div>
+                <h2>{item.title}</h2>
+                <p>{item.desc}</p>
+              </article>
+            ))}
+          </section>
 
-            <div className="hero-briefs-grid">
-              {newsItems.map((item, index) => (
-                <a
-                  key={`${item.title}-${index}`}
-                  className="hero-brief"
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ animationDelay: `${1.05 + index * 0.12}s` }}
-                >
-                  <div className="hero-brief-index">0{index + 1}</div>
-                  <div className="hero-brief-body">
-                    <div className="hero-brief-top">
-                      <span className="hero-brief-tag">{item.tag}</span>
-                      <span className="hero-brief-date">{item.publishedAt}</span>
-                    </div>
-                    <h3>{item.title}</h3>
-                    <p>{item.summary}</p>
-                    <div className="hero-brief-meta">
-                      <span>{item.source}</span>
-                      <span>查看原文 ↗</span>
-                    </div>
-                  </div>
-                </a>
+          <section className="journey-card">
+            <div className="section-heading">
+              <h2>规划只需三步</h2>
+            </div>
+            <div className="journey-steps">
+              {STEPS.map((item, index) => (
+                <div key={item.no} className="journey-step">
+                  <div className="journey-no">{item.no}</div>
+                  <div className="journey-icon" />
+                  <strong>{item.title}</strong>
+                  <span>{item.desc}</span>
+                  {index < STEPS.length - 1 ? <div className="journey-line" /> : null}
+                </div>
               ))}
             </div>
-          </aside>
-        </div>
-      </div>
+          </section>
 
-      <div className="hero-scroll">
-        <div className="hero-scroll-mouse" />
+          <AppBottomNav active="home" />
+        </section>
       </div>
-    </section>
+    </main>
   );
 }

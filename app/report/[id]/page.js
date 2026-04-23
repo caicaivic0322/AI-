@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { AppBottomNav } from '../../components/AppChrome';
 import { getReportViewState, shouldPollReport } from '../../lib/report-view-state.mjs';
 
 const PDF_SLOGAN = ['0信息差', '100%量身定制', '更可信的高考志愿推荐'];
@@ -366,21 +368,35 @@ export default function ReportPage() {
   const blurred = !isPaid;
 
   return (
-    <div className="report-page">
-      <div className="report-header">
-        <h1>🎓 志愿分析报告</h1>
-        <p>生成时间：{report.created_at}</p>
-        {isPaid && (
-          <div className="report-actions no-print">
-            <button className="btn btn-report-action" onClick={() => handleExportPdf('concise')}>下载简明版 PDF</button>
-            <button className="btn btn-report-action" onClick={() => handleExportPdf('full')}>下载全面版 PDF</button>
-            <button className="btn btn-report-action" onClick={handleShare}>一键转发</button>
-          </div>
-        )}
-        {shareMessage && <div className="report-share-tip no-print">{shareMessage}</div>}
-      </div>
+    <main className="ios-scene">
+      <div className="phone-shell">
+        <div className="app-screen report-screen">
+          <header className="planner-topbar no-print">
+            <Link href="/" className="topbar-action" aria-label="返回首页">‹</Link>
+            <h1>志愿方案</h1>
+            <button type="button" className="topbar-link report-share-link" onClick={handleShare}>转发</button>
+          </header>
 
-      <div className="report-body">
+          <section className="report-summary-card no-print">
+            <div className="planner-section-head">
+              <h2>志愿分析报告</h2>
+              <span>{isPaid ? '已解锁完整内容' : '预览版'}</span>
+            </div>
+            <p>生成时间：{report.created_at}</p>
+            <div className="report-summary-pills">
+              <span>{viewMode === 'concise' ? '简明视图' : '全面视图'}</span>
+              <span>{isPaid ? '可下载 PDF' : `待解锁 ¥${(report.amount / 100).toFixed(2)}`}</span>
+            </div>
+            {isPaid && (
+              <div className="report-actions no-print">
+                <button className="btn btn-report-action" onClick={() => handleExportPdf('concise')}>简明版 PDF</button>
+                <button className="btn btn-report-action" onClick={() => handleExportPdf('full')}>全面版 PDF</button>
+              </div>
+            )}
+            {shareMessage && <div className="report-share-tip no-print">{shareMessage}</div>}
+          </section>
+
+          <div className="report-body">
         {isPaid && (
           <section className="pdf-cover print-only">
             <div className="pdf-cover-watermark">{PDF_SITE_URL}</div>
@@ -397,8 +413,8 @@ export default function ReportPage() {
           </section>
         )}
 
-        <div className="report-section fade-in-up no-print">
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+        <div className="report-section fade-in-up no-print report-view-toggle-card">
+          <div className="report-view-toggle-row">
             <button
               className={`btn ${viewMode === 'concise' ? 'btn-gold' : 'btn-report-action'}`}
               onClick={() => setViewMode('concise')}
@@ -412,17 +428,17 @@ export default function ReportPage() {
               全面版
             </button>
           </div>
-          <p style={{ color: '#64748B', fontSize: '0.875rem', margin: 0 }}>
+          <p className="report-toggle-tip">
             简明版适合先看最终志愿排序，全面版适合核对分析逻辑和推荐依据。
           </p>
         </div>
 
         {blurred && (
-          <div className="report-section fade-in-up no-print" style={{ padding: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div className="report-section fade-in-up no-print report-unlock-card">
+            <div className="report-unlock-row">
               <div>
                 <h2 style={{ margin: 0, fontSize: '1.05rem' }}>解锁完整报告</h2>
-                <p style={{ color: '#64748B', fontSize: '0.875rem', margin: '8px 0 0' }}>
+                <p className="report-unlock-tip">
                   查看完整学校与专业推荐、详细判断依据，以及 PDF 下载。
                 </p>
               </div>
@@ -497,9 +513,9 @@ export default function ReportPage() {
         </div>
 
         {/* Section 4: Plans */}
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 16, marginTop: 8 }}>
-          📊 推荐方案
-        </h2>
+        <div className="report-subtitle-row">
+          <h2>推荐方案</h2>
+        </div>
         {(r.plans || []).map((plan, idx) => (
           <PlanCard key={idx} plan={plan} index={idx} blurred={blurred} />
         ))}
@@ -649,23 +665,26 @@ export default function ReportPage() {
 
         {/* If paid, show all clear */}
         {isPaid && (
-          <div style={{ textAlign: 'center', padding: '24px 0', color: '#10B981', fontWeight: 600 }}>
+          <div className="report-paid-note">
             ✅ 已解锁完整报告
           </div>
         )}
           </>
         )}
-      </div>
+          </div>
 
-      {/* Pay Modal */}
-      {showPay && (
-        <PayModal
-          amount={report.amount}
-          reportId={reportId}
-          onClose={() => setShowPay(false)}
-          onSuccess={handlePaySuccess}
-        />
-      )}
-    </div>
+          <AppBottomNav active="plans" />
+
+          {showPay && (
+            <PayModal
+              amount={report.amount}
+              reportId={reportId}
+              onClose={() => setShowPay(false)}
+              onSuccess={handlePaySuccess}
+            />
+          )}
+        </div>
+      </div>
+    </main>
   );
 }

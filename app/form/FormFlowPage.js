@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { AppBottomNav } from '../components/AppChrome';
 import {
   PROVINCES, SUBJECT_TYPES, PATH_OPTIONS,
   USER_ROLES, INTERESTS, STRONG_SUBJECTS,
@@ -502,6 +504,10 @@ export default function FormFlowPage({ initialMode = 'guided' }) {
     ? ['采集核心成绩信息', '构建自动画像', '推演学校与专业', '生成入学与就业规划']
     : ['采集信息完成', '构建考生画像', '生成差异化方案', '复核输出质量'];
 
+  const primaryActionLabel = isLastStep
+    ? (formMode === 'auto' ? '下一步：生成自动规划' : '下一步：生成志愿方案')
+    : `下一步：${steps[step + 1].title}`;
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -549,61 +555,72 @@ export default function FormFlowPage({ initialMode = 'guided' }) {
   }
 
   return (
-    <div className="form-page">
-      <div className="form-header">
-        <div className="form-header-inner">
-          <span className="form-brand">高考志愿填报</span>
-          <div className="step-progress">
-            {steps.map((_, i) => (
-              <span key={i} className={`step-dot ${i === step ? 'active' : ''} ${i < step ? 'done' : ''}`} />
+    <main className="ios-scene">
+      <div className="phone-shell">
+        <div className="app-screen form-screen">
+          <header className="planner-topbar">
+            <button type="button" className="topbar-action" onClick={handlePrev} aria-label="返回上一步">
+              ‹
+            </button>
+            <h1>智能规划</h1>
+            <Link href="/form" className="topbar-link">填写记录</Link>
+          </header>
+
+          <section className="planner-stepper">
+            {steps.map((item, i) => (
+              <div key={item.id} className={`planner-stepper-item ${i === step ? 'active' : ''} ${i < step ? 'done' : ''}`}>
+                <div className="planner-stepper-dot">{i + 1}</div>
+                {i < steps.length - 1 ? <div className="planner-stepper-line" /> : null}
+                <span>{item.title}</span>
+              </div>
             ))}
-          </div>
-          <div className="header-progress-text">已完成 {Math.round(progress)}%</div>
-        </div>
-      </div>
+          </section>
 
-      <div className="form-body">
-        <div className="form-container">
-          <div className={`step-wrapper step-${direction}`} key={stepKey}>
-            <div className="form-step-header">
-              <div className="form-step-icon">{steps[step].icon}</div>
-              <div className="form-step-text">
-                <span className="form-step-kicker">第 {step + 1} / {steps.length} 步 · {formMode === 'auto' ? 'AI 全自动' : '自主填写'}</span>
-                <h2>{steps[step].title}</h2>
-                <p>{steps[step].description}</p>
-              </div>
-            </div>
-
-            <div className="form-layout">
-              <div className="form-panel">
-                <StepComponent data={formData} onChange={handleChange} mode={formMode} />
-                {error ? <div className="error-toast">{error}</div> : null}
-
-                <div className="step-footer">
-                  <button className="btn btn-ghost" onClick={handlePrev}>{step === 0 ? '← 返回模式选择' : '← 上一步'}</button>
-                  {isLastStep ? (
-                    <button className="btn btn-submit" onClick={handleSubmit}>{formMode === 'auto' ? '🪄 让 AI 全自动规划' : '🎓 生成志愿报告'}</button>
-                  ) : (
-                    <button className="btn btn-next" onClick={handleNext}>下一步 →</button>
-                  )}
-                </div>
-              </div>
-
-              <aside className="helper-card">
-                <div className="helper-kicker">填写提示</div>
-                <h3>{formMode === 'auto' ? '你只需要给出最少信息' : '把你的偏好讲清楚'}</h3>
-                <p>{helperText[step]}</p>
-                <div className="helper-progress">
-                  <div className="helper-progress-track">
-                    <span style={{ width: `${progress}%` }} />
+          <div className="form-body">
+            <div className="form-container">
+              <div className={`step-wrapper step-${direction}`} key={stepKey}>
+                <section className="planner-section-card planner-overview-card">
+                  <div className="planner-section-head">
+                    <h2>{steps[step].title}</h2>
+                    <span>第 {step + 1} / {steps.length} 步</span>
                   </div>
-                  <div className="helper-progress-text">{Math.round(progress)}% 已完成</div>
-                </div>
-              </aside>
+                  <p>{steps[step].description}</p>
+                </section>
+
+                <section className="planner-section-card planner-form-card">
+                  <div className="planner-card-title">
+                    <strong>{steps[step].title}</strong>
+                    <span>{formMode === 'auto' ? 'AI 全自动模式' : '量身定制模式'}</span>
+                  </div>
+
+                  <StepComponent data={formData} onChange={handleChange} mode={formMode} />
+                </section>
+
+                <section className="planner-section-card planner-tips-card">
+                  <div className="planner-card-title">
+                    <strong>填写提示</strong>
+                    <span>{Math.round(progress)}% 已完成</span>
+                  </div>
+                  <p>{helperText[step]}</p>
+                </section>
+
+                {error ? <div className="error-toast">{error}</div> : null}
+              </div>
             </div>
           </div>
+
+          <div className="planner-action-bar">
+            <button
+              className={`btn ${isLastStep ? 'btn-submit' : 'btn-next'} planner-primary-btn`}
+              onClick={isLastStep ? handleSubmit : handleNext}
+            >
+              {primaryActionLabel}
+            </button>
+          </div>
+
+          <AppBottomNav active="form" />
         </div>
       </div>
-    </div>
+    </main>
   );
 }
