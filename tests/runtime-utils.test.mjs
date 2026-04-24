@@ -2,10 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  getDeepSeekModel,
   getAiProviderOrder,
   getNoAiProviderError,
   formatDatabaseDriverError,
 } from '../app/lib/runtime-utils.mjs';
+
+test('uses deepseek-v4-flash as the default DeepSeek model with env override support', () => {
+  assert.equal(getDeepSeekModel({}), 'deepseek-v4-flash');
+  assert.equal(getDeepSeekModel({ DEEPSEEK_MODEL: 'deepseek-v4-pro' }), 'deepseek-v4-pro');
+});
 
 test('returns providers in DeepSeek → Kimi → MiniMax order while skipping missing keys', () => {
   assert.deepEqual(

@@ -2,6 +2,12 @@ function hasUsableApiKey(value) {
   return Boolean(value && value.length > 10 && !value.includes('your_'));
 }
 
+export const DEFAULT_DEEPSEEK_MODEL = 'deepseek-v4-flash';
+
+export function getDeepSeekModel(env = process.env) {
+  return env.DEEPSEEK_MODEL || DEFAULT_DEEPSEEK_MODEL;
+}
+
 export function getAiProviderOrder(env = process.env) {
   const providers = [
     ['DeepSeek', env.DEEPSEEK_API_KEY],

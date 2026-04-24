@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { getDeepSeekModel } from './runtime-utils.mjs';
 
 const CACHE_FILE_PATH = path.join(process.cwd(), 'data', 'homepage-news.json');
 const MAX_NEWS_ITEMS = 3;
@@ -685,7 +686,7 @@ async function extractNewsFromSnapshots({ source, snapshots, fetchImpl = fetch }
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: getDeepSeekModel(),
         temperature: 0.2,
         response_format: { type: 'json_object' },
         messages: [

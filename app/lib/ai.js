@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { getAiProviderOrder, getNoAiProviderError } from './runtime-utils.mjs';
+import { getAiProviderOrder, getDeepSeekModel, getNoAiProviderError } from './runtime-utils.mjs';
 import {
   buildTavilyQueries,
   buildTavilySearchContext,
@@ -389,7 +389,7 @@ async function callDeepSeek(systemPrompt, userPrompt) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: getDeepSeekModel(),
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },

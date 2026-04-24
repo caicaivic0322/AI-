@@ -74,6 +74,7 @@ cp .env.example .env.local
 
 ```bash
 DEEPSEEK_API_KEY=
+DEEPSEEK_MODEL=deepseek-v4-flash
 KIMI_API_KEY=
 MINIMAX_API_KEY=
 TAVILY_API_KEY=
@@ -86,6 +87,7 @@ PREVIEW_MODE=false
 说明：
 
 - 至少配置一个 AI Key，推荐优先配置 `DEEPSEEK_API_KEY`
+- DeepSeek 默认基础模型为 `deepseek-v4-flash`，如需更高能力模型可把 `DEEPSEEK_MODEL` 改为 `deepseek-v4-pro`
 - 如果未配置支付密钥，支付接口会进入开发模式
 - `CRON_SECRET` 用于保护定时刷新接口
 - `PREVIEW_MODE=true` 时，生成接口会直接写入完整示例报告并自动解锁，适合纯前端演示
