@@ -11,6 +11,11 @@ import {
 import { sanitizeReportForUserDisplay, GENERIC_VERIFY_NOTE } from './report-presentation.mjs';
 import { formatHomeProvincePreference, formatSchoolPreference } from './form-utils.mjs';
 import { enrichAdmissionRates } from './admission-utils.mjs';
+import {
+  buildAdmissionPlanContext,
+  enrichReportWithAdmissionPlans,
+  loadAdmissionPlans,
+} from './admission-plans.mjs';
 
 // Read skill files to build system prompt
 function readSkillFile(relativePath) {
@@ -479,6 +484,9 @@ function mergeSourceNotes(existingSourceNotes = {}, searchResults = []) {
 export async function generateReport(formData) {
   let searchContext = '';
   let searchResults = [];
+  const admissionPlans = await loadAdmissionPlans();
+  const admissionPlanContext = buildAdmissionPlanContext(formData, admissionPlans);
+
   if (process.env.TAVILY_API_KEY) {
     console.log('Initiating Web Search via Tavily...');
     const searchPayload = await performWebSearch(formData, process.env.TAVILY_API_KEY);
@@ -494,7 +502,11 @@ export async function generateReport(formData) {
     throw getNoAiProviderError();
   }
 
-  const initialPrompt = buildUserPrompt(formData) + (searchContext ? `\n\n${searchContext}` : '');
+  const initialPrompt = [
+    buildUserPrompt(formData),
+    admissionPlanContext,
+    searchContext,
+  ].filter(Boolean).join('\n\n');
   const draftReport = await generateWithFallback(providers, systemPrompt, initialPrompt);
 
   let finalReport = draftReport;
@@ -510,7 +522,12 @@ export async function generateReport(formData) {
         finalReport = await generateWithFallback(
           providers,
           systemPrompt,
-          buildRefinementPrompt(formData, draftReport, searchContext, evidenceContext)
+          buildRefinementPrompt(
+            formData,
+            draftReport,
+            [admissionPlanContext, searchContext].filter(Boolean).join('\n\n'),
+            evidenceContext
+          )
         );
         searchResults = [...searchResults, ...evidencePayload.results];
       } catch (error) {
@@ -521,11 +538,17 @@ export async function generateReport(formData) {
   }
 
   finalReport.source_notes = mergeSourceNotes(finalReport.source_notes, searchResults);
+  finalReport = enrichReportWithAdmissionPlans(formData, finalReport, admissionPlans);
   finalReport = enrichAdmissionRates(formData, finalReport, searchResults);
+
+  const hasAdmissionPlanMatches = (finalReport.plans || [])
+    .some((plan) => plan?.admission_plan_match?.status === 'matched');
 
   finalReport.final_notes = {
     ...finalReport.final_notes,
-    data_to_verify: GENERIC_VERIFY_NOTE,
+    data_to_verify: hasAdmissionPlanMatches
+      ? finalReport.final_notes?.data_to_verify
+      : GENERIC_VERIFY_NOTE,
   };
 
   return sanitizeReportForUserDisplay(finalReport);

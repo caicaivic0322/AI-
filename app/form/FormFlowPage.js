@@ -30,6 +30,21 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+function OptionCard({ selected, onSelect, children, ariaLabel }) {
+  return (
+    <button
+      type="button"
+      className={`option-item ${selected ? 'selected' : ''}`}
+      onClick={onSelect}
+      aria-pressed={selected}
+      aria-label={ariaLabel}
+    >
+      <span className="option-dot" />
+      <span className="option-text">{children}</span>
+    </button>
+  );
+}
+
 function StepBasic({ data, onChange, mode = 'guided' }) {
   return (
     <>
@@ -55,11 +70,14 @@ function StepBasic({ data, onChange, mode = 'guided' }) {
         <label className="field-label">科类 / 选科组合 <span className="required">*</span></label>
         <div className="option-group">
           {SUBJECT_TYPES.map(type => (
-            <label key={type.value} className={`option-item ${data.subject_type === type.value ? 'selected' : ''}`}>
-              <input type="radio" checked={data.subject_type === type.value} onChange={() => onChange('subject_type', type.value)} />
-              <span className="option-dot" />
-              <span className="option-text">{type.label}</span>
-            </label>
+            <OptionCard
+              key={type.value}
+              selected={data.subject_type === type.value}
+              onSelect={() => onChange('subject_type', type.value)}
+              ariaLabel={type.label}
+            >
+              {type.label}
+            </OptionCard>
           ))}
         </div>
       </div>
@@ -70,11 +88,14 @@ function StepBasic({ data, onChange, mode = 'guided' }) {
             <label className="field-label">是否服从调剂 <span className="required">*</span></label>
             <div className="option-group">
               {[{ v: true, l: '是，服从调剂' }, { v: false, l: '否，不服从' }].map(opt => (
-                <label key={String(opt.v)} className={`option-item ${data.accept_adjustment === opt.v ? 'selected' : ''}`}>
-                  <input type="radio" checked={data.accept_adjustment === opt.v} onChange={() => onChange('accept_adjustment', opt.v)} />
-                  <span className="option-dot" />
-                  <span className="option-text">{opt.l}</span>
-                </label>
+                <OptionCard
+                  key={String(opt.v)}
+                  selected={data.accept_adjustment === opt.v}
+                  onSelect={() => onChange('accept_adjustment', opt.v)}
+                  ariaLabel={opt.l}
+                >
+                  {opt.l}
+                </OptionCard>
               ))}
             </div>
           </div>
@@ -83,11 +104,14 @@ function StepBasic({ data, onChange, mode = 'guided' }) {
             <label className="field-label">性别</label>
             <div className="option-group">
               {GENDER_OPTIONS.map(opt => (
-                <label key={opt.value} className={`option-item ${data.gender === opt.value ? 'selected' : ''}`}>
-                  <input type="radio" checked={data.gender === opt.value} onChange={() => onChange('gender', opt.value)} />
-                  <span className="option-dot" />
-                  <span className="option-text">{opt.label}</span>
-                </label>
+                <OptionCard
+                  key={opt.value}
+                  selected={data.gender === opt.value}
+                  onSelect={() => onChange('gender', opt.value)}
+                  ariaLabel={opt.label}
+                >
+                  {opt.label}
+                </OptionCard>
               ))}
             </div>
           </div>
@@ -125,11 +149,14 @@ function StepPreference({ data, onChange }) {
         <label className="field-label">是否接受省外</label>
         <div className="option-group">
           {[{ v: true, l: '可以接受省外' }, { v: false, l: '只考虑省内' }].map(opt => (
-            <label key={String(opt.v)} className={`option-item ${data.accept_out_province === opt.v ? 'selected' : ''}`}>
-              <input type="radio" checked={data.accept_out_province === opt.v} onChange={() => onChange('accept_out_province', opt.v)} />
-              <span className="option-dot" />
-              <span className="option-text">{opt.l}</span>
-            </label>
+            <OptionCard
+              key={String(opt.v)}
+              selected={data.accept_out_province === opt.v}
+              onSelect={() => onChange('accept_out_province', opt.v)}
+              ariaLabel={opt.l}
+            >
+              {opt.l}
+            </OptionCard>
           ))}
         </div>
       </div>
@@ -154,11 +181,14 @@ function StepPreference({ data, onChange }) {
         <label className="field-label">是否优先留在本省</label>
         <div className="option-group">
           {HOME_PROVINCE_OPTIONS.map(opt => (
-            <label key={opt.value} className={`option-item ${data.prefer_home_province === opt.value ? 'selected' : ''}`}>
-              <input type="radio" checked={data.prefer_home_province === opt.value} onChange={() => onChange('prefer_home_province', opt.value)} />
-              <span className="option-dot" />
-              <span className="option-text">{opt.label}</span>
-            </label>
+            <OptionCard
+              key={opt.value}
+              selected={data.prefer_home_province === opt.value}
+              onSelect={() => onChange('prefer_home_province', opt.value)}
+              ariaLabel={opt.label}
+            >
+              {opt.label}
+            </OptionCard>
           ))}
         </div>
       </div>
@@ -243,15 +273,21 @@ function StepFamily({ data, onChange }) {
         <label className="field-label">你的身份 <span className="required">*</span></label>
         <div className="option-group">
           {USER_ROLES.map(role => (
-            <label key={role.value} className={`option-item ${data.decision_maker === role.value ? 'selected' : ''}`}>
-              <input type="radio" checked={data.decision_maker === role.value} onChange={() => onChange('decision_maker', role.value)} />
+            <button
+              key={role.value}
+              type="button"
+              className={`option-item ${data.decision_maker === role.value ? 'selected' : ''}`}
+              onClick={() => onChange('decision_maker', role.value)}
+              aria-pressed={data.decision_maker === role.value}
+              aria-label={role.label}
+            >
               <span className="option-dot" />
               <div>
                 <span className="option-text" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {role.icon} {role.label}
                 </span>
               </div>
-            </label>
+            </button>
           ))}
         </div>
       </div>
@@ -320,11 +356,14 @@ function StepStudent({ data, onChange }) {
         <label className="field-label">是否接受高强度专业</label>
         <div className="option-group">
           {[{ v: true, l: '可以接受（如医学、计算机等）' }, { v: false, l: '希望相对轻松' }].map(opt => (
-            <label key={String(opt.v)} className={`option-item ${data.accept_intensive === opt.v ? 'selected' : ''}`}>
-              <input type="radio" checked={data.accept_intensive === opt.v} onChange={() => onChange('accept_intensive', opt.v)} />
-              <span className="option-dot" />
-              <span className="option-text">{opt.l}</span>
-            </label>
+            <OptionCard
+              key={String(opt.v)}
+              selected={data.accept_intensive === opt.v}
+              onSelect={() => onChange('accept_intensive', opt.v)}
+              ariaLabel={opt.l}
+            >
+              {opt.l}
+            </OptionCard>
           ))}
         </div>
       </div>
@@ -333,11 +372,14 @@ function StepStudent({ data, onChange }) {
         <label className="field-label">是否愿意考研</label>
         <div className="option-group">
           {[{ v: true, l: '愿意考研' }, { v: false, l: '不太想考研' }].map(opt => (
-            <label key={String(opt.v)} className={`option-item ${data.willing_graduate === opt.v ? 'selected' : ''}`}>
-              <input type="radio" checked={data.willing_graduate === opt.v} onChange={() => onChange('willing_graduate', opt.v)} />
-              <span className="option-dot" />
-              <span className="option-text">{opt.l}</span>
-            </label>
+            <OptionCard
+              key={String(opt.v)}
+              selected={data.willing_graduate === opt.v}
+              onSelect={() => onChange('willing_graduate', opt.v)}
+              ariaLabel={opt.l}
+            >
+              {opt.l}
+            </OptionCard>
           ))}
         </div>
       </div>
@@ -404,6 +446,7 @@ export default function FormFlowPage({ initialMode = 'guided' }) {
   const [stepKey, setStepKey] = useState(0);
   const [direction, setDirection] = useState('forward');
   const [loadingStage, setLoadingStage] = useState(1);
+  const [provinceHint, setProvinceHint] = useState('');
 
   useEffect(() => {
     if (!loading) {
@@ -417,6 +460,37 @@ export default function FormFlowPage({ initialMode = 'guided' }) {
 
     return () => window.clearInterval(timer);
   }, [loading]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function detectProvince() {
+      if (formData.province) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/geo/province', { cache: 'no-store' });
+        const payload = await response.json();
+        if (!cancelled && payload?.province) {
+          setFormData((prev) => {
+            if (prev.province) {
+              return prev;
+            }
+
+            return { ...prev, province: payload.province };
+          });
+          setProvinceHint(`已根据当前位置自动识别为 ${payload.province}`);
+        }
+      } catch {}
+    }
+
+    detectProvince();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.province]);
 
   const handleChange = useCallback((key, value) => {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -563,7 +637,7 @@ export default function FormFlowPage({ initialMode = 'guided' }) {
               ‹
             </button>
             <h1>智能规划</h1>
-            <Link href="/form" className="topbar-link">填写记录</Link>
+            <Link href="/plans" className="topbar-link">填写记录</Link>
           </header>
 
           <section className="planner-stepper">
@@ -592,6 +666,10 @@ export default function FormFlowPage({ initialMode = 'guided' }) {
                     <strong>{steps[step].title}</strong>
                     <span>{formMode === 'auto' ? 'AI 全自动模式' : '量身定制模式'}</span>
                   </div>
+
+                  {step === 0 && provinceHint ? (
+                    <p className="planner-inline-note">{provinceHint}</p>
+                  ) : null}
 
                   <StepComponent data={formData} onChange={handleChange} mode={formMode} />
                 </section>

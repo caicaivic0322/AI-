@@ -3,7 +3,8 @@ import path from 'path';
 
 const CACHE_FILE_PATH = path.join(process.cwd(), 'data', 'homepage-news.json');
 const MAX_NEWS_ITEMS = 3;
-const CACHE_TTL_MS = 1000 * 60 * 60 * 6;
+const CACHE_TTL_MS = 1000 * 60 * 60 * 24;
+const FALLBACK_UPDATED_AT = '2026-04-24T00:00:00.000+08:00';
 
 const NEWS_SOURCES = [
   {
@@ -11,7 +12,7 @@ const NEWS_SOURCES = [
     url: 'https://www.moe.gov.cn/jyb_xwfb/gzdt_gzdt/',
     focus: '高考政策、本科扩容、招生工作通知、基础学科与新兴学科布局',
     readyText: '教育部',
-    articleIncludePatterns: ['/jyb_xwfb/gzdt_gzdt/'],
+    articleIncludePatterns: ['/jyb_xwfb/gzdt_gzdt/', '/srcsite/A15/'],
     rawHtmlPreferred: true,
   },
   {
@@ -36,28 +37,28 @@ const NEWS_SOURCES = [
 
 export const FALLBACK_HOMEPAGE_NEWS = [
   {
-    tag: '政策',
-    title: '优质本科继续扩容',
-    summary: '2026 高招继续强调扩大优质本科供给，招生计划进一步向基础学科、新兴学科、交叉学科和急需专业倾斜。',
-    source: '教育部',
-    url: 'https://www.moe.gov.cn/',
-    publishedAt: '2026-03-01',
-  },
-  {
-    tag: '填报',
-    title: '专业组设置更重可读性',
-    summary: '各地持续优化院校专业组与志愿填报规则，考生在专业选择透明度和志愿满足率方面更受重视。',
-    source: '阳光高考',
-    url: 'https://gaokao.chsi.com.cn/',
-    publishedAt: '2026-03-02',
-  },
-  {
     tag: '快讯',
-    title: '高校新增计划偏向智能与交叉',
-    summary: '多所高校把增量计划投向人工智能、先进制造、交叉学科等方向，传统优势专业也在同步升级。',
-    source: '中国教育在线',
-    url: 'https://gaokao.eol.cn/news/',
-    publishedAt: '2026-03-03',
+    title: '2026高考安全工作会议召开',
+    summary: '教育部会同有关部门部署2026年高考安全工作，强调公平底线、考试安全与科学选才导向。',
+    source: '教育部',
+    url: 'https://www.moe.gov.cn/jyb_xwfb/gzdt_gzdt/moe_1485/202604/t20260421_1434408.html',
+    publishedAt: '2026-04-21',
+  },
+  {
+    tag: '政策',
+    title: '2026普通高校招生工作通知发布',
+    summary: '教育部明确2026年普通高校招生工作要求，提出优化招生专业结构和规模，服务国家战略与民生需求。',
+    source: '教育部',
+    url: 'https://www.moe.gov.cn/srcsite/A15/moe_776/s3258/202601/t20260121_1427110.html',
+    publishedAt: '2026-01-16',
+  },
+  {
+    tag: '政策',
+    title: '2026特殊类型招生工作部署',
+    summary: '教育部部署2026年高校部分特殊类型招生工作，强调规范化建设、有效监督和公平公正底线。',
+    source: '教育部',
+    url: 'https://www.moe.gov.cn/jyb_xwfb/gzdt_gzdt/s5987/202511/t20251103_1418849.html',
+    publishedAt: '2025-11-03',
   },
 ];
 
@@ -73,7 +74,13 @@ function normalizeNewsItem(item, fallbackItem) {
 }
 
 function isValidNewsItem(item) {
-  return Boolean(item?.title && item?.summary && item?.source && item?.url);
+  return Boolean(
+    item?.title &&
+    item?.summary &&
+    item?.source &&
+    item?.url &&
+    isHomepageNewsRelevant(item.title, item.summary)
+  );
 }
 
 function dedupeNewsItems(items) {
@@ -92,8 +99,21 @@ function getSourceOrder() {
   return NEWS_SOURCES.map((item) => item.source);
 }
 
+function parseNewsDate(value) {
+  if (!value) {
+    return 0;
+  }
+
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function sortByFreshness(items) {
+  return [...items].sort((a, b) => parseNewsDate(b.publishedAt) - parseNewsDate(a.publishedAt));
+}
+
 export function selectHomepageNewsItems(items) {
-  const dedupedItems = dedupeNewsItems(items.filter(isValidNewsItem));
+  const dedupedItems = sortByFreshness(dedupeNewsItems(items.filter(isValidNewsItem)));
   const selected = [];
   const sourceOrder = getSourceOrder();
 
@@ -117,22 +137,16 @@ export function selectHomepageNewsItems(items) {
   return selected.slice(0, MAX_NEWS_ITEMS);
 }
 
-function mergeWithFallback(items) {
-  const merged = selectHomepageNewsItems(items);
+function mergeWithFallback(items, now = new Date()) {
+  const merged = selectHomepageNewsItems(filterUsableNewsItems(items, now));
   const filled = [...merged];
-  const selectedSources = new Set(filled.map((item) => item.source));
 
   for (const fallbackItem of FALLBACK_HOMEPAGE_NEWS) {
     if (filled.length >= MAX_NEWS_ITEMS) {
       break;
     }
 
-    if (selectedSources.has(fallbackItem.source)) {
-      continue;
-    }
-
     filled.push(normalizeNewsItem(null, fallbackItem));
-    selectedSources.add(fallbackItem.source);
   }
 
   return filled.slice(0, MAX_NEWS_ITEMS).map((item, index) =>
@@ -158,6 +172,32 @@ function isFresh(updatedAt, now) {
   return now.getTime() - new Date(updatedAt).getTime() < CACHE_TTL_MS;
 }
 
+function getNextRefreshAt(updatedAt) {
+  if (!updatedAt) {
+    return null;
+  }
+
+  const updatedTime = new Date(updatedAt).getTime();
+  if (Number.isNaN(updatedTime)) {
+    return null;
+  }
+
+  return new Date(updatedTime + CACHE_TTL_MS).toISOString();
+}
+
+function createFeedMeta({ updatedAt, currentTime, source }) {
+  const fresh = source === 'cache' && isFresh(updatedAt, currentTime);
+
+  return {
+    updatedAt: updatedAt || null,
+    nextRefreshAt: getNextRefreshAt(updatedAt),
+    source,
+    status: fresh ? 'fresh' : source === 'cache' ? 'stale' : 'fallback',
+    isStale: !fresh,
+    ttlMs: CACHE_TTL_MS,
+  };
+}
+
 function resolveNow(now) {
   return typeof now === 'function' ? now() : now;
 }
@@ -171,6 +211,157 @@ function stripHtml(html = '') {
     .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function limitText(text = '', maxLength = 74) {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxLength - 1)}…`;
+}
+
+function cleanNewsTitle(title = '') {
+  return stripHtml(title)
+    .replace(/[-_—|].*?(中华人民共和国教育部政府门户网站|教育部|阳光高考|中国教育在线).*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function inferPublishedAt(snapshot = {}) {
+  const text = `${snapshot.title || ''} ${snapshot.text || ''} ${snapshot.url || ''}`;
+  const dateMatch = text.match(/(20\d{2})[年/-](\d{1,2})[月/-](\d{1,2})/);
+  if (dateMatch) {
+    const [, year, month, day] = dateMatch;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+
+  const compactMatch = text.match(/(20\d{2})(\d{2})(\d{2})/);
+  if (compactMatch) {
+    const [, year, month, day] = compactMatch;
+    return `${year}-${month}-${day}`;
+  }
+
+  return '';
+}
+
+function inferNewsTag(title = '', text = '') {
+  const content = `${title} ${text}`;
+  if (/志愿|填报|专业组|录取规则/.test(content)) {
+    return '填报';
+  }
+
+  if (/召开|发布|公布|部署|快讯|动态/.test(content)) {
+    return '快讯';
+  }
+
+  return '政策';
+}
+
+function isHomepageNewsRelevant(title = '', text = '') {
+  const content = `${title} ${text}`;
+  return /高考|普通高校招生|高校招生|招生考试|招生工作|招生计划|特殊类型招生|志愿填报|录取/.test(content);
+}
+
+function isFuturePublishedAt(publishedAt, now = new Date()) {
+  if (!publishedAt) {
+    return false;
+  }
+
+  const date = new Date(`${publishedAt}T00:00:00`);
+  const current = resolveNow(now);
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  const currentDate = new Date(current.getFullYear(), current.getMonth(), current.getDate());
+  return date.getTime() > currentDate.getTime();
+}
+
+function normalizeUrl(value, baseUrl) {
+  try {
+    return new URL(value || baseUrl, baseUrl).href;
+  } catch {
+    return baseUrl;
+  }
+}
+
+function getKnownSnapshotUrls(source, snapshots = []) {
+  const knownUrls = new Set([normalizeUrl(source.url, source.url)]);
+
+  for (const snapshot of snapshots) {
+    if (snapshot.url) {
+      knownUrls.add(normalizeUrl(snapshot.url, source.url));
+    }
+
+    for (const link of snapshot.links || []) {
+      if (link.href) {
+        knownUrls.add(normalizeUrl(link.href, source.url));
+      }
+    }
+  }
+
+  return knownUrls;
+}
+
+function normalizeExtractedNewsItems(items = [], { source, snapshots = [], now = new Date() }) {
+  const knownUrls = getKnownSnapshotUrls(source, snapshots);
+
+  return items
+    .map((item) => ({
+      ...item,
+      source: item.source || source.source,
+      url: normalizeUrl(item.url, source.url),
+    }))
+    .filter((item) => knownUrls.has(item.url))
+    .filter((item) => !isFuturePublishedAt(item.publishedAt, now))
+    .filter(isValidNewsItem);
+}
+
+function filterUsableNewsItems(items = [], now = new Date()) {
+  return items
+    .filter((item) => !isFuturePublishedAt(item.publishedAt, now))
+    .filter(isValidNewsItem);
+}
+
+function buildSummaryFromSnapshot(snapshot = {}) {
+  const title = cleanNewsTitle(snapshot.title || '');
+  const text = stripHtml(snapshot.text || '')
+    .replace(title, ' ')
+    .replace(/发布时间[:：]?\s*\d{4}[-年]\d{1,2}[-月]\d{1,2}日?/g, ' ')
+    .replace(/来源[:：]?\s*[\u4e00-\u9fa5A-Za-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const sentences = text
+    .split(/[。！？；]/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length >= 18)
+    .filter((sentence) => /高考|招生|高校|志愿|录取|专业|考试/.test(sentence));
+  const summary = sentences[0] || text.slice(0, 90);
+
+  return limitText(summary || title);
+}
+
+export function extractHomepageNewsHeuristically({ source, snapshots = [] }) {
+  return snapshots
+    .map((snapshot) => {
+      const title = cleanNewsTitle(snapshot.title || '');
+      const content = `${title} ${snapshot.text || ''}`;
+      if (!title || !isHomepageNewsRelevant(title, content)) {
+        return null;
+      }
+
+      return {
+        tag: inferNewsTag(title, snapshot.text),
+        title: limitText(title, 28),
+        summary: buildSummaryFromSnapshot(snapshot),
+        source: source.source,
+        url: snapshot.url || source.url,
+        publishedAt: inferPublishedAt(snapshot),
+      };
+    })
+    .filter(isValidNewsItem);
 }
 
 function delay(ms) {
@@ -435,11 +626,11 @@ export async function collectSourceArticleSnapshots(source, dependencies = {}) {
   try {
     entrySnapshot = await crawlSnapshot(source.url);
   } catch (error) {
-    if (!source.rawHtmlPreferred) {
+    try {
+      entrySnapshot = buildRawHtmlSnapshot(source, source.url, await fetchSourceHtml(source.url));
+    } catch {
       throw error;
     }
-
-    entrySnapshot = buildRawHtmlSnapshot(source, source.url, await fetchSourceHtml(source.url));
   }
 
   let articleLinks = pickHomepageArticleLinks(source, entrySnapshot.links);
@@ -483,54 +674,55 @@ export async function collectSourceArticleSnapshots(source, dependencies = {}) {
 async function extractNewsFromSnapshots({ source, snapshots, fetchImpl = fetch }) {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
-    return [];
+    return extractHomepageNewsHeuristically({ source, snapshots });
   }
 
-  const response = await fetchImpl('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: '你是高考资讯编辑。请从资讯详情页或栏目页内容中提取最多 3 条适合放在首页的最新高考政策或高校招考快讯，只输出 JSON。',
-        },
-        {
-          role: 'user',
-          content: JSON.stringify({
-            instruction: '返回 { "items": [{ "tag": "政策/填报/快讯", "title": "", "summary": "", "url": "", "publishedAt": "YYYY-MM-DD 或空字符串", "source": "" }] }。summary 控制在 60 字以内，优先选择与 2026 高考政策、招生计划、专业调整、高校招办动态相关的信息；优先详情页，不足时再使用栏目页。',
-            source,
-            articlePages: snapshots.map((snapshot) => ({
-              url: snapshot.url,
-              title: snapshot.title,
-              text: snapshot.text,
-              candidateLinks: snapshot.links,
-            })),
-          }),
-        },
-      ],
-    }),
-  });
+  try {
+    const response = await fetchImpl('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        temperature: 0.2,
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content: '你是高考资讯编辑。请从资讯详情页或栏目页内容中提取最多 3 条适合放在首页的最新高考政策或高校招考快讯，只输出 JSON。',
+          },
+          {
+            role: 'user',
+            content: JSON.stringify({
+              instruction: '返回 { "items": [{ "tag": "政策/填报/快讯", "title": "", "summary": "", "url": "", "publishedAt": "YYYY-MM-DD 或空字符串", "source": "" }] }。summary 控制在 60 字以内，优先选择与 2026 高考政策、招生计划、专业调整、高校招办动态相关的信息；优先详情页，不足时再使用栏目页。',
+              source,
+              articlePages: snapshots.map((snapshot) => ({
+                url: snapshot.url,
+                title: snapshot.title,
+                text: snapshot.text,
+                candidateLinks: snapshot.links,
+              })),
+            }),
+          },
+        ],
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`DeepSeek extract failed: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`DeepSeek extract failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '{"items":[]}';
+    const parsed = JSON.parse(content);
+
+    return normalizeExtractedNewsItems(parsed.items || [], { source, snapshots });
+  } catch (error) {
+    console.warn(`Homepage AI extraction failed for ${source.source}, using heuristic fallback:`, error.message);
+    return extractHomepageNewsHeuristically({ source, snapshots });
   }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || '{"items":[]}';
-  const parsed = JSON.parse(content);
-
-  return (parsed.items || []).map((item) => ({
-    ...item,
-    source: item.source || source.source,
-    url: item.url ? new URL(item.url, source.url).href : source.url,
-  }));
 }
 
 export async function crawlHomepageNewsWithXCrawl(dependencies = {}) {
@@ -551,6 +743,11 @@ export async function crawlHomepageNewsWithXCrawl(dependencies = {}) {
 }
 
 export async function getHomepageNews(dependencies = {}) {
+  const feed = await getHomepageNewsFeed(dependencies);
+  return feed.items;
+}
+
+export async function getHomepageNewsFeed(dependencies = {}) {
   const {
     now = new Date(),
     readCache = defaultReadCache,
@@ -559,12 +756,26 @@ export async function getHomepageNews(dependencies = {}) {
 
   try {
     const payload = await readCache();
-    if (Array.isArray(payload?.items) && payload.items.length > 0 && isFresh(payload.updatedAt, currentTime)) {
-      return mergeWithFallback(payload.items);
+    if (Array.isArray(payload?.items) && payload.items.length > 0) {
+      return {
+        items: mergeWithFallback(payload.items, currentTime),
+        meta: createFeedMeta({
+          updatedAt: payload.updatedAt,
+          currentTime,
+          source: 'cache',
+        }),
+      };
     }
   } catch {}
 
-  return FALLBACK_HOMEPAGE_NEWS;
+  return {
+    items: FALLBACK_HOMEPAGE_NEWS,
+    meta: createFeedMeta({
+      updatedAt: FALLBACK_UPDATED_AT,
+      currentTime,
+      source: 'fallback',
+    }),
+  };
 }
 
 export async function refreshHomepageNews(dependencies = {}) {
@@ -576,7 +787,7 @@ export async function refreshHomepageNews(dependencies = {}) {
   const currentTime = resolveNow(now);
 
   const rawItems = await crawlHomepageNews();
-  const items = mergeWithFallback(rawItems);
+  const items = mergeWithFallback(rawItems, currentTime);
   const payload = {
     updatedAt: currentTime.toISOString(),
     items,

@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { AppBottomNav, BrandMark } from './components/AppChrome';
+import { getHomepageNewsFeed } from './lib/homepage-news.mjs';
+
+export const dynamic = 'force-dynamic';
 
 const FEATURE_CARDS = [
   {
@@ -24,6 +27,37 @@ const STEPS = [
   { no: '2', title: '智能分析', desc: '生成方向' },
   { no: '3', title: '查看结果', desc: '调整与优化' },
 ];
+
+const HERO_POINTS = [
+  '覆盖分数、位次、专业兴趣与城市偏好',
+  '输出清晰结论，方便和家长快速讨论',
+  '同步参考最新政策与高校快讯',
+];
+
+function formatNewsUpdatedAt(updatedAt) {
+  if (!updatedAt) {
+    return '自动更新';
+  }
+
+  const date = new Date(updatedAt);
+  if (Number.isNaN(date.getTime())) {
+    return '自动更新';
+  }
+
+  return `${date.getMonth() + 1}月${date.getDate()}日更新`;
+}
+
+function getNewsStatusText(meta) {
+  if (meta?.status === 'fresh') {
+    return '每日 1 次同步';
+  }
+
+  if (meta?.status === 'stale') {
+    return '缓存待刷新';
+  }
+
+  return '官方兜底';
+}
 
 function FeatureIcon({ type }) {
   if (type === 'target') {
@@ -55,7 +89,12 @@ function FeatureIcon({ type }) {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const newsFeed = await getHomepageNewsFeed();
+  const newsItems = newsFeed.items;
+  const newsUpdatedLabel = formatNewsUpdatedAt(newsFeed.meta.updatedAt);
+  const newsStatusText = getNewsStatusText(newsFeed.meta);
+
   return (
     <main className="ios-scene">
       <div className="phone-shell">
@@ -68,7 +107,7 @@ export default function HomePage() {
                 <span>智能规划</span>
               </div>
             </div>
-            <Link href="/form" className="guide-link">
+            <Link href="/guide" className="guide-link">
               <span className="guide-link-icon">◎</span>
               <span>新手指南</span>
             </Link>
@@ -76,19 +115,20 @@ export default function HomePage() {
 
           <section className="hero-card">
             <div className="hero-copy">
-              <div className="hero-chip">2026 高考</div>
-              <h1>科学规划志愿 更合适的大学与专业</h1>
+              <div className="hero-meta-row">
+                <span>2026 高考</span>
+                <span>AI 志愿规划</span>
+              </div>
+              <h1 className="hero-title">
+                <span className="hero-title-line">科学规划志愿</span>
+                <span className="hero-title-line">找到更适合的</span>
+                <span className="hero-title-line">大学与专业</span>
+              </h1>
               <p>基于政策、数据与算法，为你生成个性化志愿方案。</p>
-            </div>
-
-            <div className="hero-visual" aria-hidden="true">
-              <div className="hero-book-stack">
-                <span className="book book-top" />
-                <span className="book book-mid" />
-                <span className="book book-base" />
-                <span className="cap-top" />
-                <span className="cap-bottom" />
-                <span className="cap-tassel" />
+              <div className="hero-keywords" aria-label="规划依据">
+                <span>政策</span>
+                <span>数据</span>
+                <span>算法</span>
               </div>
             </div>
           </section>
@@ -100,6 +140,15 @@ export default function HomePage() {
             </Link>
             <p>仅需 3 步，生成你的志愿方案</p>
           </div>
+
+          <section className="hero-point-list" aria-label="核心说明">
+            {HERO_POINTS.map((item) => (
+              <div key={item} className="hero-point-row">
+                <span className="hero-point-bullet" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </section>
 
           <section className="feature-grid" aria-label="核心能力">
             {FEATURE_CARDS.map((item) => (
@@ -126,6 +175,44 @@ export default function HomePage() {
                   <span>{item.desc}</span>
                   {index < STEPS.length - 1 ? <div className="journey-line" /> : null}
                 </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="news-card" aria-labelledby="home-news-title">
+            <div className="section-heading news-heading">
+              <div>
+                <span className="news-kicker">2026 最新速览</span>
+                <h2 id="home-news-title">政策与高校招考快讯</h2>
+                <p className="news-refresh-state">
+                  <span>{newsUpdatedLabel}</span>
+                  <span>{newsStatusText}</span>
+                </p>
+              </div>
+              <a href="https://gaokao.chsi.com.cn/" target="_blank" rel="noreferrer" className="news-link">
+                查看更多
+              </a>
+            </div>
+            <div className="news-list">
+              {newsItems.map((item, index) => (
+                <a
+                  key={`${item.title}-${index}`}
+                  className="news-item"
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <div className="news-item-head">
+                    <span className="news-tag">{item.tag}</span>
+                    <span className="news-date">{item.publishedAt}</span>
+                  </div>
+                  <strong>{item.title}</strong>
+                  <p>{item.summary}</p>
+                  <div className="news-meta">
+                    <span>{item.source}</span>
+                    <span>原文 ↗</span>
+                  </div>
+                </a>
               ))}
             </div>
           </section>

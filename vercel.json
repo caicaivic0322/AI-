@@ -3,14 +3,6 @@
     {
       "path": "/api/cron/refresh-homepage-news",
       "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/refresh-homepage-news",
-      "schedule": "0 5 * * *"
-    },
-    {
-      "path": "/api/cron/refresh-homepage-news",
-      "schedule": "0 12 * * *"
     }
   ]
 }

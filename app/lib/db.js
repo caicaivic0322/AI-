@@ -101,6 +101,18 @@ export function getReport(id) {
   return row;
 }
 
+export function listReports(limit = 20) {
+  const db = getDb();
+  const stmt = db.prepare(
+    'SELECT id, form_data, status, paid, amount, created_at, paid_at FROM reports ORDER BY datetime(created_at) DESC LIMIT ?'
+  );
+
+  return stmt.all(limit).map((row) => ({
+    ...row,
+    form_data: JSON.parse(row.form_data),
+  }));
+}
+
 export function markReportPaid(id, orderNo) {
   const db = getDb();
   const stmt = db.prepare(

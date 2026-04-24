@@ -120,16 +120,41 @@ npm run news:refresh
 ### 自动刷新
 
 - 首页只读取 `data/homepage-news.json` 缓存，不会在每次请求时现抓
+- 如果缓存超过 24 小时仍未刷新，首页会继续展示已有缓存并标记“缓存待刷新”，避免退回到更旧的兜底内容
+- `DEEPSEEK_API_KEY` 不可用时，刷新脚本会从官方页面标题、日期和正文自动提取摘要作为兜底
 - Vercel Cron 会调用 `/api/cron/refresh-homepage-news`
-- 当前固定每天刷新 3 次
+- 当前固定每天刷新 1 次
 - UTC 调度时间：
   - `0 0 * * *`
-  - `0 5 * * *`
-  - `0 12 * * *`
 - 对应北京时间：
   - 08:00
-  - 13:00
-  - 20:00
+
+## 招生计划数据准备
+
+- `data/admission-plans.json` 是 2026 招生计划的结构化缓存入口，目前可先保持空数组
+- 后续各省考试院或高校公布计划后，可把官方 PDF/Excel/页面解析为统一字段后写入 `items`
+- 报告生成会优先读取已导入的当年招生计划；命中后会在方案中标记专业组、计划人数和官方来源
+- 如果没有命中真实计划，系统会自动降级为“历年录取与公开资料参考”，并保留最终核验提醒
+
+单条计划字段建议：
+
+```json
+{
+  "year": 2026,
+  "province": "浙江",
+  "batch": "本科普通批",
+  "school_code": "10335",
+  "school_name": "浙江大学",
+  "major_group": "专业组001",
+  "major_code": "080901",
+  "major_name": "计算机科学与技术",
+  "subject_requirement": "物理+化学",
+  "plan_count": 4,
+  "source_name": "浙江省教育考试院",
+  "source_url": "https://example.edu/official-plan",
+  "published_at": "2026-06-20"
+}
+```
 
 ## 接口概览
 

@@ -9,6 +9,42 @@ import { getReportViewState, shouldPollReport } from '../../lib/report-view-stat
 const PDF_SLOGAN = ['0信息差', '100%量身定制', '更可信的高考志愿推荐'];
 const PDF_SITE_URL = 'https://www.gaokao.cn';
 
+function ReportStateScreen({ title, detail, icon, actionHref, actionLabel, retryAction }) {
+  return (
+    <main className="ios-scene">
+      <div className="phone-shell">
+        <section className="app-screen state-screen">
+          <header className="planner-topbar">
+            <Link href="/" className="topbar-action" aria-label="返回首页">‹</Link>
+            <h1>志愿方案</h1>
+            <Link href="/plans" className="topbar-link">记录</Link>
+          </header>
+
+          <div className="state-card">
+            <div className="state-icon" aria-hidden="true">{icon}</div>
+            <h2>{title}</h2>
+            {detail ? <p>{detail}</p> : null}
+            <div className="state-actions">
+              {retryAction ? (
+                <button className="primary-cta state-cta-button" type="button" onClick={retryAction}>
+                  立即刷新
+                </button>
+              ) : null}
+              {actionHref ? (
+                <Link href={actionHref} className="plan-record-link state-secondary-link">
+                  {actionLabel}
+                </Link>
+              ) : null}
+            </div>
+          </div>
+
+          <AppBottomNav active="plans" />
+        </section>
+      </div>
+    </main>
+  );
+}
+
 function PayModal({ amount, reportId, onClose, onSuccess }) {
   const [payType, setPayType] = useState('wechat');
   const [paying, setPaying] = useState(false);
@@ -114,6 +150,8 @@ function PlanCard({ plan, index, blurred }) {
     '冲刺': 'plan-stretch',
   };
   const typeClass = typeMap[plan.type] || 'plan-balanced';
+  const admissionPlanMatch = plan.admission_plan_match;
+  const hasAdmissionPlanMatch = admissionPlanMatch?.status === 'matched';
 
   return (
     <div className={`plan-card ${typeClass} ${blurred ? 'blur-overlay' : ''}`}>
@@ -121,6 +159,16 @@ function PlanCard({ plan, index, blurred }) {
         <span className="plan-type">方案 {index + 1} — {plan.type}</span>
         <div className="plan-school">{plan.school}</div>
         <div className="plan-major">{plan.major}</div>
+
+        {hasAdmissionPlanMatch ? (
+          <div className="plan-source-pill">
+            <span>已匹配 {admissionPlanMatch.year} 招生计划</span>
+            <strong>{admissionPlanMatch.major_group || '专业组'} · 计划 {admissionPlanMatch.plan_count || '--'} 人</strong>
+            {admissionPlanMatch.source_url ? (
+              <a href={admissionPlanMatch.source_url} target="_blank" rel="noreferrer">来源</a>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="plan-metrics">
           <div className="plan-metric">
@@ -228,6 +276,22 @@ function TrendCard({ item, blurred }) {
   );
 }
 
+function InsightCard({ title, items = [] }) {
+  return (
+    <div className="report-mini-card">
+      <h3>{title}</h3>
+      <div className="report-mini-list">
+        {items.map((item) => (
+          <div key={item.label} className="report-mini-row">
+            <span>{item.label}</span>
+            <strong>{item.value || '暂无'}</strong>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ReportPage() {
   const params = useParams();
   const reportId = params.id;
@@ -317,49 +381,25 @@ export default function ReportPage() {
 
   if (viewState.kind === 'loading') {
     return (
-      <div className="loading-page">
-        <div className="loading-spinner" />
-        <div className="loading-text">{viewState.title}</div>
-      </div>
+      <ReportStateScreen title={viewState.title} detail="正在拉取报告数据，请稍候。" icon="⏳" actionHref="/plans" actionLabel="查看记录" />
     );
   }
 
   if (viewState.kind === 'error') {
     return (
-      <div className="loading-page">
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: 16 }}>😞</div>
-          <div className="loading-text">{viewState.title}</div>
-          <button className="btn btn-secondary" style={{ marginTop: 24 }} onClick={() => window.location.href = '/'}>返回首页</button>
-        </div>
-      </div>
+      <ReportStateScreen title={viewState.title} detail="读取报告失败，可以返回首页重新开始，或去方案记录查看历史结果。" icon="😞" actionHref="/" actionLabel="返回首页" />
     );
   }
 
   if (viewState.kind === 'failed') {
     return (
-      <div className="loading-page">
-        <div style={{ textAlign: 'center', maxWidth: 360 }}>
-          <div style={{ fontSize: '3rem', marginBottom: 16 }}>⚠️</div>
-          <div className="loading-text">{viewState.title}</div>
-          <div className="loading-subtext" style={{ marginTop: 12 }}>{viewState.detail}</div>
-          <button className="btn btn-secondary" style={{ marginTop: 24 }} onClick={handleRetryFetch}>重新获取状态</button>
-        </div>
-      </div>
+      <ReportStateScreen title={viewState.title} detail={viewState.detail} icon="⚠️" actionHref="/form" actionLabel="重新填写" retryAction={handleRetryFetch} />
     );
   }
 
   if (viewState.kind === 'pending') {
     return (
-      <div className="loading-page">
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: 16 }}>📋</div>
-          <div className="loading-text">{viewState.title}</div>
-          <div className="loading-subtext">{viewState.detail}</div>
-          <div className="loading-subtext" style={{ marginTop: 8 }}>页面会自动刷新最新结果</div>
-          <button className="btn btn-secondary" style={{ marginTop: 24 }} onClick={handleRetryFetch}>立即刷新</button>
-        </div>
-      </div>
+      <ReportStateScreen title={viewState.title} detail={`${viewState.detail} 页面会自动刷新最新结果。`} icon="📋" actionHref="/plans" actionLabel="返回记录" retryAction={handleRetryFetch} />
     );
   }
 
@@ -387,10 +427,29 @@ export default function ReportPage() {
               <span>{viewMode === 'concise' ? '简明视图' : '全面视图'}</span>
               <span>{isPaid ? '可下载 PDF' : `待解锁 ¥${(report.amount / 100).toFixed(2)}`}</span>
             </div>
+            <div className="report-summary-grid">
+              <InsightCard
+                title="考生概况"
+                items={[
+                  { label: '省份', value: report.form_data?.province },
+                  { label: '分数', value: report.form_data?.score ? `${report.form_data.score} 分` : '' },
+                  { label: '位次', value: report.form_data?.rank || '' },
+                ]}
+              />
+              <InsightCard
+                title="当前状态"
+                items={[
+                  { label: '报告类型', value: report.paid ? '完整报告' : '预览报告' },
+                  { label: '查看模式', value: viewMode === 'concise' ? '简明版' : '全面版' },
+                  { label: '解锁状态', value: report.paid ? '已支付' : '待支付' },
+                ]}
+              />
+            </div>
             {isPaid && (
               <div className="report-actions no-print">
                 <button className="btn btn-report-action" onClick={() => handleExportPdf('concise')}>简明版 PDF</button>
                 <button className="btn btn-report-action" onClick={() => handleExportPdf('full')}>全面版 PDF</button>
+                <Link href="/plans" className="btn btn-report-action">查看记录</Link>
               </div>
             )}
             {shareMessage && <div className="report-share-tip no-print">{shareMessage}</div>}
@@ -478,24 +537,16 @@ export default function ReportPage() {
 
         {viewMode === 'full' && (
           <>
-
-        {/* Section 1: Student Summary */}
         <div className="report-section fade-in-up">
           <h2><span className="section-icon">📋</span> 学生定位总结</h2>
-          <p style={{ color: '#334155', lineHeight: 1.8, fontSize: '0.9375rem' }}>
-            {r.student_summary}
-          </p>
+          <p className="report-paragraph">{r.student_summary}</p>
         </div>
 
-        {/* Section 2: Family Summary */}
         <div className="report-section fade-in-up">
           <h2><span className="section-icon">👨‍👩‍👧</span> 家庭偏好总结</h2>
-          <p style={{ color: '#334155', lineHeight: 1.8, fontSize: '0.9375rem' }}>
-            {r.family_summary}
-          </p>
+          <p className="report-paragraph">{r.family_summary}</p>
         </div>
 
-        {/* Section 3: Strategy */}
         <div className="report-section fade-in-up">
           <h2><span className="section-icon">🎯</span> 推荐策略</h2>
           <div className="report-item">
@@ -512,7 +563,6 @@ export default function ReportPage() {
           </div>
         </div>
 
-        {/* Section 4: Plans */}
         <div className="report-subtitle-row">
           <h2>推荐方案</h2>
         </div>
@@ -520,19 +570,17 @@ export default function ReportPage() {
           <PlanCard key={idx} plan={plan} index={idx} blurred={blurred} />
         ))}
 
-        {/* Unlock CTA for unpaid */}
         {blurred && (
-          <div style={{ textAlign: 'center', padding: '16px 0 32px' }}>
+          <div className="report-inline-unlock">
             <button className="btn btn-gold btn-lg" onClick={handleUnlock}>
               🔓 解锁完整报告 ¥{(report.amount / 100).toFixed(2)}
             </button>
-            <p style={{ fontSize: '0.8125rem', color: '#94A3B8', marginTop: 12 }}>
+            <p>
               查看完整的学校、专业推荐及详细分析
             </p>
           </div>
         )}
 
-        {/* Section 5: Employment Trends */}
         <div className={`report-section fade-in-up ${blurred ? 'blur-overlay' : ''}`}>
           <div className={blurred ? 'blur-content' : ''}>
             <h2><span className="section-icon">📈</span> 专业与就业趋势研判</h2>
@@ -550,7 +598,6 @@ export default function ReportPage() {
           {blurred && <div className="blur-cta"><p>付费后查看</p></div>}
         </div>
 
-        {/* Section 6: Family Concerns */}
         <div className={`report-section fade-in-up ${blurred ? 'blur-overlay' : ''}`}>
           <div className={blurred ? 'blur-content' : ''}>
             <h2><span className="section-icon">💬</span> 家长最关心</h2>
@@ -578,15 +625,15 @@ export default function ReportPage() {
           <div className={blurred ? 'blur-content' : ''}>
             <h2><span className="section-icon">🔎</span> 参考来源</h2>
             <p className="report-paragraph">{r.source_notes?.summary}</p>
-            <div style={{ display: 'grid', gap: 16 }}>
+            <div className="report-source-grid">
               {(r.source_notes?.items || []).map((item, index) => (
                 <div key={`${item.url || item.title}-${index}`} className="plan-card plan-balanced">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+                  <div className="report-card-head">
                     <strong>{item.title}</strong>
                     <span className="plan-type">{item.category}</span>
                   </div>
-                  <p style={{ color: '#334155', marginBottom: 10 }}>{item.snippet}</p>
-                  <a href={item.url} target="_blank" rel="noreferrer" style={{ color: '#1D4ED8', wordBreak: 'break-all' }}>
+                  <p className="report-source-snippet">{item.snippet}</p>
+                  <a href={item.url} target="_blank" rel="noreferrer" className="report-source-link">
                     {item.url}
                   </a>
                 </div>
@@ -600,10 +647,10 @@ export default function ReportPage() {
           <div className={blurred ? 'blur-content' : ''}>
             <h2><span className="section-icon">🧠</span> 推荐依据与判断</h2>
             <p className="report-paragraph">{r.recommendation_evidence?.overall_judgment}</p>
-            <div style={{ display: 'grid', gap: 16 }}>
+            <div className="report-evidence-grid">
               {(r.recommendation_evidence?.factors || []).map((item, index) => (
-                <div key={`${item.title}-${index}`} className="report-section" style={{ marginBottom: 0 }}>
-                  <h3 style={{ marginTop: 0, marginBottom: 10 }}>{item.title}</h3>
+                <div key={`${item.title}-${index}`} className="report-mini-card evidence-card">
+                  <h3>{item.title}</h3>
                   <div className="report-item">
                     <span className="report-item-label">分析：</span>
                     <span className="report-item-value">{item.analysis}</span>
@@ -619,7 +666,7 @@ export default function ReportPage() {
                 </div>
               ))}
             </div>
-            <div style={{ display: 'grid', gap: 16, marginTop: 20 }}>
+            <div className="report-rationale-grid">
               {(r.recommendation_evidence?.school_major_rationales || []).map((item, index) => (
                 <div key={`${item.school}-${item.major}-${index}`} className="plan-card plan-balanced">
                   <div className="plan-school">{item.school}</div>
@@ -643,7 +690,6 @@ export default function ReportPage() {
           {blurred && <div className="blur-cta"><p>付费后查看</p></div>}
         </div>
 
-        {/* Section 7: Final Notes */}
         <div className={`report-section fade-in-up ${blurred ? 'blur-overlay' : ''}`}>
           <div className={blurred ? 'blur-content' : ''}>
             <h2><span className="section-icon">📝</span> 最终提醒</h2>
@@ -669,6 +715,11 @@ export default function ReportPage() {
             ✅ 已解锁完整报告
           </div>
         )}
+
+        <div className="report-bottom-actions no-print">
+          <Link href="/plans" className="btn btn-report-action">回到方案记录</Link>
+          <Link href="/form" className="btn btn-report-action">重新规划一份</Link>
+        </div>
           </>
         )}
           </div>

@@ -5,7 +5,9 @@ import {
   FALLBACK_HOMEPAGE_NEWS,
   collectSourceArticleSnapshots,
   discoverSourceLinksViaSearch,
+  extractHomepageNewsHeuristically,
   getHomepageNews,
+  getHomepageNewsFeed,
   pickHomepageArticleLinks,
   refreshHomepageNews,
   selectHomepageNewsItems,
@@ -20,6 +22,30 @@ test('returns fallback homepage news when cache is unavailable', async () => {
 
   assert.equal(items.length, 3);
   assert.deepEqual(items, FALLBACK_HOMEPAGE_NEWS);
+});
+
+test('uses stale cached homepage news instead of older fallback items', async () => {
+  const feed = await getHomepageNewsFeed({
+    now: () => new Date('2026-04-24T10:00:00.000Z'),
+    readCache: async () => ({
+      updatedAt: '2026-03-27T10:00:00.000Z',
+      items: [
+        {
+          tag: '快讯',
+          title: '缓存里的最新高考快讯',
+          summary: '这条内容来自已有缓存，即使超过刷新周期也应先展示，避免退回更旧兜底。',
+          source: '教育部',
+          url: 'https://www.moe.gov.cn/example-cache',
+          publishedAt: '2026-03-27',
+        },
+      ],
+    }),
+  });
+
+  assert.equal(feed.items.length, 3);
+  assert.equal(feed.items[0].title, '缓存里的最新高考快讯');
+  assert.equal(feed.meta.status, 'stale');
+  assert.equal(feed.meta.source, 'cache');
 });
 
 test('refreshes homepage news from crawler results and fills gaps with fallback items', async () => {
@@ -47,6 +73,65 @@ test('refreshes homepage news from crawler results and fills gaps with fallback 
   assert.equal(items[0].url, 'https://www.moe.gov.cn/example-1');
   assert.equal(storedPayload.items.length, 3);
   assert.equal(storedPayload.updatedAt, '2026-03-27T10:00:00.000Z');
+});
+
+test('extracts homepage news heuristically when AI extraction is unavailable', () => {
+  const items = extractHomepageNewsHeuristically({
+    source: {
+      source: '教育部',
+      url: 'https://www.moe.gov.cn/jyb_xwfb/gzdt_gzdt/',
+    },
+    snapshots: [
+      {
+        title: '2026年全国普通高校招生考试安全工作视频会议召开 - 中华人民共和国教育部政府门户网站',
+        text: '2026-04-21 来源：教育部 4月21日，教育部会同国家教育统一考试工作部际联席会议成员单位，召开2026年全国普通高校招生考试安全工作视频会议。会议要求牢牢把握高考公平底线。',
+        url: 'https://www.moe.gov.cn/jyb_xwfb/gzdt_gzdt/moe_1485/202604/t20260421_1434408.html',
+      },
+      {
+        title: '教育部、人社部部署2026年高校毕业生就业政策宣传活动',
+        text: '两部门联合开展就业政策宣传，促进毕业生高质量就业。',
+        url: 'https://www.moe.gov.cn/jyb_xwfb/gzdt_gzdt/s5987/202604/t20260424_1434667.html',
+      },
+    ],
+  });
+
+  assert.equal(items.length, 1);
+  assert.equal(items[0].tag, '快讯');
+  assert.equal(items[0].publishedAt, '2026-04-21');
+  assert.match(items[0].title, /2026年全国普通高校招生考试安全工作视频会议召开/);
+  assert.match(items[0].summary, /高考|普通高校招生考试/);
+});
+
+test('refresh filters future or unrelated extracted news before writing cache', async () => {
+  let storedPayload;
+  const items = await refreshHomepageNews({
+    now: () => new Date('2026-04-24T10:00:00.000Z'),
+    crawlHomepageNews: async () => [
+      {
+        tag: '填报',
+        title: '2026年志愿填报规则变化解读',
+        summary: '新高考省份志愿填报规则调整。',
+        source: '阳光高考',
+        url: 'https://gaokao.chsi.com.cn/future',
+        publishedAt: '2026-05-03',
+      },
+      {
+        tag: '政策',
+        title: '高校毕业生就业政策宣传活动',
+        summary: '两部门联合开展就业政策宣传。',
+        source: '教育部',
+        url: 'https://www.moe.gov.cn/jobs',
+        publishedAt: '2026-04-24',
+      },
+    ],
+    writeCache: async (payload) => {
+      storedPayload = payload;
+    },
+  });
+
+  assert.equal(items.length, 3);
+  assert.equal(items[0].title, '2026高考安全工作会议召开');
+  assert.deepEqual(storedPayload.items, items);
 });
 
 test('picks candidate article links from stable source pages', () => {
@@ -260,8 +345,8 @@ test('selects homepage news with source quota before filling remaining slots', (
   const selected = selectHomepageNewsItems([
     {
       tag: '政策',
-      title: '教育部通知',
-      summary: '教育部摘要',
+      title: '教育部高考招生通知',
+      summary: '教育部发布普通高校招生工作安排。',
       source: '教育部',
       url: 'https://www.moe.gov.cn/1',
       publishedAt: '2026-03-27',
@@ -269,23 +354,23 @@ test('selects homepage news with source quota before filling remaining slots', (
     {
       tag: '政策',
       title: '阳光高考政策',
-      summary: '阳光高考摘要',
+      summary: '阳光高考发布志愿填报政策说明。',
       source: '阳光高考',
       url: 'https://gaokao.chsi.com.cn/1',
       publishedAt: '2026-03-27',
     },
     {
       tag: '快讯',
-      title: '中教在线快讯',
-      summary: '中教在线摘要',
+      title: '中教在线招生快讯',
+      summary: '中国教育在线发布高校招生快讯。',
       source: '中国教育在线',
       url: 'https://gaokao.eol.cn/1',
       publishedAt: '2026-03-27',
     },
     {
       tag: '快讯',
-      title: '中教在线快讯2',
-      summary: '中教在线摘要2',
+      title: '中教在线招生快讯2',
+      summary: '中国教育在线发布高考招生快讯。',
       source: '中国教育在线',
       url: 'https://gaokao.eol.cn/2',
       publishedAt: '2026-03-27',

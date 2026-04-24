@@ -51,7 +51,7 @@ export function AppBottomNav({ active = 'home' }) {
     {
       key: 'plans',
       label: '方案',
-      href: '#',
+      href: '/plans',
       icon: (
         <NavIcon>
           <path d="M6 5h12" />
@@ -64,7 +64,7 @@ export function AppBottomNav({ active = 'home' }) {
     {
       key: 'me',
       label: '我的',
-      href: '#',
+      href: '/me',
       icon: (
         <NavIcon>
           <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
@@ -80,12 +80,7 @@ export function AppBottomNav({ active = 'home' }) {
         const selected = item.key === active;
         const className = `app-bottom-link ${selected ? 'active' : ''}`;
 
-        return item.href === '#' ? (
-          <span key={item.key} className={className}>
-            {item.icon}
-            <span>{item.label}</span>
-          </span>
-        ) : (
+        return (
           <Link key={item.key} href={item.href} className={className}>
             {item.icon}
             <span>{item.label}</span>
